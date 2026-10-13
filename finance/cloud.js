@@ -13,19 +13,30 @@ import { createClient } from "https://cdn.jsdelivr.net/npm/@neondatabase/neon-js
 
   function isConfigured() {
     return Boolean(
-      cfg.neonDatabaseUrl &&
-      /^https:\/\//i.test(cfg.neonDatabaseUrl) &&
-      !cfg.neonDatabaseUrl.includes("YOUR_")
+      cfg.neonAuthUrl &&
+      cfg.neonDataApiUrl &&
+      /^https:\/\//i.test(cfg.neonAuthUrl) &&
+      /^https:\/\//i.test(cfg.neonDataApiUrl) &&
+      !cfg.neonAuthUrl.includes("YOUR_") &&
+      !cfg.neonDataApiUrl.includes("YOUR_")
     );
   }
 
   function getClient() {
     if (!isConfigured()) return null;
     if (client) return client;
-    // The single public database URL lets neon-js derive both the branch-scoped
-    // Managed Better Auth endpoint and Data API endpoint. No database password
-    // or Neon management API key is shipped to the browser.
-    client = createClient(cfg.neonDatabaseUrl);
+
+    // neon-js expects explicit Auth and Data API endpoints.
+    // Both are public browser endpoints; no PostgreSQL password or management
+    // API key is exposed here.
+    client = createClient({
+      auth: {
+        url: cfg.neonAuthUrl
+      },
+      dataApi: {
+        url: cfg.neonDataApiUrl
+      }
+    });
     return client;
   }
 
@@ -48,18 +59,38 @@ import { createClient } from "https://cdn.jsdelivr.net/npm/@neondatabase/neon-js
     }
   }
 
+  function getCallbackError() {
+    const params = new URLSearchParams(window.location.search);
+    const code = params.get("error");
+    if (!code) return null;
+    const description =
+      params.get("error_description") ||
+      params.get("message") ||
+      code.replaceAll("_", " ");
+    return new Error(`Google sign-in failed: ${description}`);
+  }
+
   async function getCurrentUser() {
     const neon = getClient();
     if (!neon) return null;
+
+    const callbackError = getCallbackError();
+    if (callbackError) throw callbackError;
+
     const result = await neon.auth.getSession();
     if (result?.error) throw result.error;
-    return result?.data?.user || null;
+
+    // Better Auth returns { data: { session, user } }; keep the fallback for
+    // minor SDK response-shape differences between beta releases.
+    const data = result?.data ?? result;
+    return data?.user || data?.session?.user || null;
   }
 
   async function signInWithGoogle() {
     const neon = getClient();
     if (!neon) throw new Error("Neon is not configured.");
-    const callbackURL = window.location.origin + window.location.pathname;
+
+    const callbackURL = `${window.location.origin}${window.location.pathname}`;
     const result = await neon.auth.signIn.social({
       provider: "google",
       callbackURL,
@@ -102,8 +133,8 @@ import { createClient } from "https://cdn.jsdelivr.net/npm/@neondatabase/neon-js
     const neon = getClient();
     if (!neon) throw new Error("Neon is not configured.");
 
-    // Authorization gate: authentication alone is not enough. Only a user that
-    // has been explicitly provisioned in app_settings may open this dashboard.
+    // Authentication alone is not enough. Only the provisioned finance owner
+    // has an app_settings row and therefore passes this authorization gate.
     const settingsResult = await neon.from("app_settings").select("*").maybeSingle();
     if (settingsResult.error) throw settingsResult.error;
     if (!settingsResult.data) {
