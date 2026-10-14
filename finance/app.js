@@ -1396,6 +1396,7 @@ function setupTransactionWorkspace() {
     window.MonthlyReview?.init();
     window.FinanceForecast?.init();
     window.FinanceIntegrity?.init();
+    window.FinanceAccountEvidence?.init();
 
     window.addEventListener("budget:data-tools-error", event => {
         showToast(event.detail?.message || "Data export failed.", "error");
@@ -1672,6 +1673,13 @@ async function fetchAndInitData() {
             budgets: payload.budgets || []
         });
         window.FinanceIntegrity?.setData({ cash: cashData });
+        window.FinanceAccountEvidence?.setData({
+            cash: cashData,
+            withdrawals: withdrawalsData,
+            bni: bniData,
+            muamalat: muamalatData,
+            gopay: gopayData
+        });
 
         const filtered = getFilteredData();
         const filteredW = getFilteredWithdrawals();
@@ -1755,6 +1763,9 @@ function initNavigation() {
                 } else if (targetViewId === "view-reconciliation") {
                     topBarTitle.textContent = "Account Reconciliation";
                     topBarDesc.textContent = "Align wallet cash, JP Bank, and Hokkoku Bank records";
+                } else if (targetViewId === "view-account-evidence") {
+                    topBarTitle.textContent = "Account Evidence";
+                    topBarDesc.textContent = "Inspect source balances and transfer markers before reconciling";
                 } else if (targetViewId === "view-bni-account") {
                     topBarTitle.textContent = "BNI Account Tracker";
                     topBarDesc.textContent = "IDR transactions and taplus savings";
@@ -1832,6 +1843,8 @@ function initNavigation() {
                 if (expenseCategoryChart) expenseCategoryChart.resize();
             } else if (targetViewId === "view-reconciliation") {
                 updateReconciliationView();
+            } else if (targetViewId === "view-account-evidence") {
+                window.FinanceAccountEvidence?.render();
             } else if (targetViewId === "view-bni-account") {
                 updateBniAccountView();
                 if (bniTrendChart) bniTrendChart.resize();
