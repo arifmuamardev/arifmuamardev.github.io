@@ -16,9 +16,11 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.min.js"></script>
     <!-- Public Neon endpoints live in config.js; database credentials never ship to the browser. -->
     <script src="config.js?v=4.0.1"></script>
-    <script type="module" src="cloud.js?v=4.0.1"></script>
+    <script type="module" src="cloud.js?v=4.4.0"></script>
     <link rel="stylesheet" href="styles.css?v=4.3.0">
-    <script src="app.js?v=4.3.0" defer></script>
+    <link rel="stylesheet" href="features/transaction-editor.css?v=4.4.0">
+    <script src="features/transaction-editor.js?v=4.4.0" defer></script>
+    <script src="app.js?v=4.4.0" defer></script>
 </head>
 <body class="dark-theme">
     <div id="auth-gate" class="auth-gate" aria-live="polite">
@@ -387,11 +389,17 @@
                             <h2>Transactions</h2>
                             <p>Find a transaction fast, narrow the ledger, then open a row for full details.</p>
                         </div>
-                        <div class="transaction-search-wrap">
-                            <i class="fa-solid fa-magnifying-glass"></i>
-                            <input id="transaction-primary-search" type="search" class="sync-filter-search"
-                                placeholder="Search item, store, category, or note…" autocomplete="off">
-                            <kbd>⌘K</kbd>
+                        <div class="transaction-toolbar-actions">
+                            <div class="transaction-search-wrap">
+                                <i class="fa-solid fa-magnifying-glass"></i>
+                                <input id="transaction-primary-search" type="search" class="sync-filter-search"
+                                    placeholder="Search item, store, category, or note…" autocomplete="off">
+                                <kbd>/</kbd>
+                            </div>
+                            <button type="button" id="transaction-add-btn" class="transaction-add-btn">
+                                <i class="fa-solid fa-plus"></i>
+                                Add transaction
+                            </button>
                         </div>
                     </div>
 
@@ -2992,7 +3000,7 @@
             <div>
                 <span class="home-section-kicker">Transaction detail</span>
                 <h2 id="transaction-drawer-title">Transaction</h2>
-                <p id="transaction-drawer-subtitle">Read-only ledger record</p>
+                <p id="transaction-drawer-subtitle">Owner-only ledger record</p>
             </div>
             <button type="button" id="transaction-drawer-close" class="transaction-drawer-close" aria-label="Close transaction details">
                 <i class="fa-solid fa-xmark"></i>
@@ -3013,11 +3021,14 @@
                 <div><dt>Note</dt><dd id="transaction-detail-note">—</dd></div>
                 <div><dt>Record ID</dt><dd id="transaction-detail-id">—</dd></div>
             </dl>
-            <div class="transaction-drawer-readonly">
-                <i class="fa-solid fa-lock"></i>
-                <div>
-                    <strong>Read-only for now</strong>
-                    <p>Editing will be enabled in a separate write-safe batch after validation.</p>
+            <div class="transaction-drawer-actions">
+                <button type="button" id="transaction-edit-btn" class="transaction-edit-btn">
+                    <i class="fa-solid fa-pen-to-square"></i>
+                    Edit transaction
+                </button>
+                <div class="transaction-write-note">
+                    <i class="fa-solid fa-shield-halved"></i>
+                    <span>Delete remains disabled. Older cash records also protect financial fields so later running balances cannot be silently rewritten.</span>
                 </div>
             </div>
         </div>

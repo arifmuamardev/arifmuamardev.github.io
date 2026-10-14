@@ -691,6 +691,7 @@ function closeTransactionDrawer() {
     drawer?.classList.remove("open");
     drawer?.setAttribute("aria-hidden", "true");
     scrim?.classList.add("hidden");
+    window.TransactionEditor?.setCurrent(null);
 }
 
 function openTransactionDrawer(item) {
@@ -737,6 +738,7 @@ function openTransactionDrawer(item) {
         if (el) el.textContent = String(value);
     });
 
+    window.TransactionEditor?.setCurrent(item);
     scrim.classList.remove("hidden");
     drawer.classList.add("open");
     drawer.setAttribute("aria-hidden", "false");
@@ -1330,6 +1332,19 @@ function setupFilters() {
 
 
 function setupTransactionWorkspace() {
+    window.TransactionEditor?.init();
+
+    window.addEventListener("budget:transaction-saved", async event => {
+        closeTransactionDrawer();
+        const mode = event.detail?.mode === "updated" ? "updated" : "added";
+        showToast(`Transaction ${mode} successfully.`, "success");
+        try {
+            await fetchAndInitData();
+        } catch (error) {
+            console.error("Refresh after transaction save failed:", error);
+        }
+    });
+
     document.querySelectorAll("[data-transaction-payment]").forEach(chip => {
         chip.addEventListener("click", () => {
             activeTransactionPaymentFilter = chip.dataset.transactionPayment || "all";
@@ -1518,6 +1533,7 @@ async function fetchAndInitData() {
             setupTransactionWorkspace();
             controlsInitialized = true;
         }
+        window.TransactionEditor?.setRows(cashData);
 
         const filtered = getFilteredData();
         const filteredW = getFilteredWithdrawals();
@@ -1954,7 +1970,7 @@ async function bootstrapApplication() {
     initTheme();
     initNavigation();
     initShellUX();
-    initAISimulator();
+    initBudgetSimulator();
 
     try {
         await waitForBudgetCloud();
@@ -3608,7 +3624,7 @@ function updateUtilityPages(filteredData) {
     updateSingleUtilityPage(filteredData, "water", "Water Bill", "#06b6d4");
     updateSingleUtilityPage(filteredData, "mobile", "Mobile Bill", "#ec4899");
     updateUtilitiesOverviewPage(filteredData);
-    updateAIRecommendationsPage(filteredData);
+    updateInsightsPage(filteredData);
 }
 
 function getClosestUpcomingUtilityBill(filteredData) {
@@ -3887,12 +3903,12 @@ function renderUtilitiesOverviewChart(monthlySummary) {
     });
 }
 
-// --- AI Recommendations & Budget Simulator ---
+// --- Financial Insights & Budget Simulator ---
 let simBaselineIncome = 145000;
 let simBaselineRent = 45228;
 let simBaselineUtilities = 7377;
 
-function updateAIRecommendationsPage(filteredData) {
+function updateInsightsPage(filteredData) {
     const source = cashData.length ? cashData : filteredData;
     if (!source.length) return;
 
@@ -4036,7 +4052,7 @@ function updateAIRecommendationsPage(filteredData) {
     updateSimulator();
 }
 
-function initAISimulator() {
+function initBudgetSimulator() {
     const sliderGroceries = document.getElementById("slider-groceries");
     const sliderDining = document.getElementById("slider-dining");
     const sliderDiscretionary = document.getElementById("slider-discretionary");
