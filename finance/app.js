@@ -1386,6 +1386,32 @@ function setupTransactionWorkspace() {
         }
     });
 
+    window.addEventListener("budget:open-transaction", event => {
+        const id = Number(event.detail?.id);
+        const item = cashData.find(row => Number(row.id) === id);
+        if (!item) {
+            showToast("Transaction could not be found in the loaded ledger.", "error");
+            return;
+        }
+        document.querySelector('.nav-btn[data-target="view-transactions"]')?.click();
+        window.setTimeout(() => openTransactionDrawer(item), 0);
+    });
+
+    window.addEventListener("budget:edit-transaction", event => {
+        const id = Number(event.detail?.id);
+        const item = cashData.find(row => Number(row.id) === id);
+        if (!item) {
+            showToast("Transaction could not be found in the loaded ledger.", "error");
+            return;
+        }
+        document.querySelector('.nav-btn[data-target="view-transactions"]')?.click();
+        window.setTimeout(() => {
+            window.TransactionEditor?.openEdit(item, {
+                category: event.detail?.suggestedCategory || ""
+            });
+        }, 0);
+    });
+
     document.querySelectorAll("[data-transaction-payment]").forEach(chip => {
         chip.addEventListener("click", () => {
             activeTransactionPaymentFilter = chip.dataset.transactionPayment || "all";
