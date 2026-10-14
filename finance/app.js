@@ -1397,6 +1397,7 @@ function setupTransactionWorkspace() {
     window.FinanceForecast?.init();
     window.FinanceIntegrity?.init();
     window.FinanceAccountEvidence?.init();
+    window.FinanceVisaReview?.init();
 
     window.addEventListener("budget:data-tools-error", event => {
         showToast(event.detail?.message || "Data export failed.", "error");
@@ -1680,6 +1681,11 @@ async function fetchAndInitData() {
             muamalat: muamalatData,
             gopay: gopayData
         });
+        window.FinanceVisaReview?.setData({
+            cash: cashData,
+            evidence: payload.cardEvidence,
+            loadError: payload.cardEvidenceError
+        });
 
         const filtered = getFilteredData();
         const filteredW = getFilteredWithdrawals();
@@ -1778,6 +1784,9 @@ function initNavigation() {
                 } else if (targetViewId === "view-cc-ku") {
                     topBarTitle.textContent = "CC KU Tracker";
                     topBarDesc.textContent = "Hokuriku VISA Card active statement and billing cycles";
+                } else if (targetViewId === "view-visa-review") {
+                    topBarTitle.textContent = "Hokuriku VISA Proof";
+                    topBarDesc.textContent = "Compare bank statements and balance evidence with recorded expenses";
                 } else if (targetViewId === "view-toped-card") {
                     topBarTitle.textContent = "Tokopedia Card Tracker";
                     topBarDesc.textContent = "Tokopedia Card active billing and installments";
@@ -1835,6 +1844,8 @@ function initNavigation() {
                 window.FinanceForecast?.render();
             } else if (targetViewId === "view-integrity") {
                 window.FinanceIntegrity?.render();
+            } else if (targetViewId === "view-visa-review") {
+                window.FinanceVisaReview?.render();
             } else if (targetViewId === "view-income") {
                 if (incomeMonthlyChart) incomeMonthlyChart.resize();
                 if (incomeCategoryChart) incomeCategoryChart.resize();
@@ -2018,6 +2029,18 @@ function updateReconciliationView() {
             ? '<i class="fa-solid fa-circle-check"></i><span>No adjustment is required. Actual funds and recorded balance are aligned after pending card bills.</span>'
             : '<i class="fa-solid fa-triangle-exclamation"></i><span>Review the proposed adjustment carefully. It will create one ledger transaction only after you confirm below.</span>';
     }
+    // The legacy reconciliation RPC treats every historical CC KU purchase
+    // since a fixed start date as unpaid. Disable its write action until
+    // statement-level liabilities and actual balances have been reconciled.
+    if (confirm) { confirm.checked = false; confirm.disabled = true; }
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa-solid fa-lock"></i> Adjustment paused';
+    }
+    if (status) {
+        status.className = "recon-status warning";
+        status.textContent = "Balance adjustment is temporarily paused: historical credit card expenses are not a valid unpaid-bill total. Review Hokuriku VISA Proof before adjusting the ledger.";
+    }
     return preview;
 }
 
@@ -2040,6 +2063,8 @@ function initReconciliation() {
     updateReconciliationView();
 
     btn.addEventListener("click", async () => {
+        showToast("Balance adjustments are paused pending source-level card reconciliation.", "error");
+        return; // Safety gate: do not invoke legacy reconcile_balance with stale card debt.
         const preview = updateReconciliationView();
         if (!preview.allFilled || !confirm.checked || Math.abs(preview.discrepancy) < 0.01) return;
 
@@ -2239,7 +2264,20 @@ document.addEventListener("DOMContentLoaded", bootstrapApplication);
 // --- CC KU Tracker Specific Logic ---
 let ccKuGrouped = {};
 
-function getCCKuPaymentDetails(dateStr, kategoriNormalized) {
+function getCCKuPaymentDetails(dateStr, kategoriNormalized, note = "") {
+    // Imported bank document lines use the actual due date, not a guessed
+    // billing cutoff. Delayed utility charges can fall outside normal ranges.
+    const officialPayDate = window.FinanceVisaReview?.statementDueForLedgerEntry(note);
+    if (officialPayDate) {
+        const due = new Date(officialPayDate + "T00:00:00Z");
+        const year = due.getUTCFullYear();
+        const month = due.getUTCMonth();
+        return {
+            billingStart: new Date(Date.UTC(year, month - 2, 16)).toISOString().slice(0, 10),
+            billingEnd: new Date(Date.UTC(year, month - 1, 15)).toISOString().slice(0, 10),
+            payDate: officialPayDate
+        };
+    }
     const date = new Date(dateStr);
     let year = date.getFullYear();
     let month = date.getMonth() + 1; // 1-indexed
@@ -2282,11 +2320,11 @@ function getCCKuPaymentDetails(dateStr, kategoriNormalized) {
 }
 
 function initCCKuTracker() {
-    const ccKuTrans = cashData.filter(item => item.payment_type === 'cashless' && item.note === 'CC KU');
+    const ccKuTrans = cashData.filter(item => item.payment_type === 'cashless' && String(item.note || '').includes('CC KU'));
     
     ccKuGrouped = {};
     ccKuTrans.forEach(item => {
-        const { billingStart, billingEnd, payDate } = getCCKuPaymentDetails(item.tanggal, item.kategori_normalized);
+        const { billingStart, billingEnd, payDate } = getCCKuPaymentDetails(item.tanggal, item.kategori_normalized, item.note);
         if (!ccKuGrouped[payDate]) {
             ccKuGrouped[payDate] = {
                 payDate,
@@ -2323,7 +2361,7 @@ function initCCKuTracker() {
         if (pd > todayStr) {
             statusLabel = " (Next Bill)";
         } else {
-            statusLabel = " (Paid)";
+            statusLabel = " (Past cycle · unverified)";
         }
         
         const groupInfo = ccKuGrouped[pd];
@@ -2406,7 +2444,9 @@ function updateCCKuView(selectedPayDate) {
                 const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
                 return `${monthNames[parseInt(parts[1]) - 1]} ${parts[2]}`;
             };
-            rangeLabel = `${formatMonthDay(groupInfo.billingStart)} - ${formatMonthDay(groupInfo.billingEnd)}`;
+            rangeLabel = groupInfo.transactions.some(item => String(item.note || "").includes("VISA-PDF-"))
+                ? "Bank statement (includes delayed utility charges)"
+                : `${formatMonthDay(groupInfo.billingStart)} - ${formatMonthDay(groupInfo.billingEnd)}`;
             
             if (selectedPayDate > todayStr) {
                 statusText = "Outstanding";
@@ -2414,10 +2454,10 @@ function updateCCKuView(selectedPayDate) {
                 statusClass = "badge-status-outstanding";
                 statusIcon = '<i class="fa-solid fa-clock"></i>';
             } else {
-                statusText = "Paid & Cleared";
-                statusSub = "Auto-debited from bank";
-                statusClass = "badge-status-paid";
-                statusIcon = '<i class="fa-solid fa-circle-check"></i>';
+                statusText = "Past cycle";
+                statusSub = "Payment is not inferred from due date. Check VISA Proof.";
+                statusClass = "badge-status-future";
+                statusIcon = '<i class="fa-solid fa-circle-info"></i>';
             }
         }
     }

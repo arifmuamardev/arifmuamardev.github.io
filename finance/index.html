@@ -16,7 +16,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.min.js"></script>
     <!-- Public Neon endpoints live in config.js; database credentials never ship to the browser. -->
     <script src="config.js?v=4.0.1"></script>
-    <script type="module" src="cloud.js?v=4.9.1"></script>
+    <script type="module" src="cloud.js?v=5.4.0"></script>
     <link rel="stylesheet" href="styles.css?v=4.9.1">
     <link rel="stylesheet" href="features/transaction-editor.css?v=4.4.0">
     <link rel="stylesheet" href="features/transaction-history.css?v=4.5.0">
@@ -26,6 +26,7 @@
     <link rel="stylesheet" href="features/forecast.css?v=5.0.0">
     <link rel="stylesheet" href="features/data-integrity.css?v=5.2.0">
     <link rel="stylesheet" href="features/account-evidence.css?v=5.3.0">
+    <link rel="stylesheet" href="features/visa-review.css?v=5.4.0">
     <script src="features/transaction-editor.js?v=4.7.0" defer></script>
     <script src="features/transaction-history.js?v=4.5.0" defer></script>
     <script src="features/data-tools.js?v=4.7.0" defer></script>
@@ -34,7 +35,8 @@
     <script src="features/forecast.js?v=5.1.0" defer></script>
     <script src="features/data-integrity.js?v=5.2.0" defer></script>
     <script src="features/account-evidence.js?v=5.3.0" defer></script>
-    <script src="app.js?v=5.3.0" defer></script>
+    <script src="features/visa-review.js?v=5.4.0" defer></script>
+    <script src="app.js?v=5.4.0" defer></script>
 </head>
 <body class="dark-theme">
     <div id="auth-gate" class="auth-gate" aria-live="polite">
@@ -151,6 +153,7 @@
                     <summary><span><i class="fa-solid fa-credit-card"></i> Commitments</span><i class="fa-solid fa-chevron-down disclosure-chevron"></i></summary>
                     <div class="sidebar-disclosure-content">
                         <button class="nav-btn" data-target="view-cc-ku"><i class="fa-solid fa-credit-card"></i><span>Hokuriku VISA</span></button>
+                        <button class="nav-btn" data-target="view-visa-review"><i class="fa-solid fa-file-circle-check"></i><span>VISA Proof</span></button>
                         <button class="nav-btn" data-target="view-toped-card"><i class="fa-solid fa-credit-card"></i><span>Tokopedia Card</span></button>
                         <button class="nav-btn" data-target="view-spaylater"><i class="fa-solid fa-calendar-days"></i><span>SPayLater</span></button>
                         <button class="nav-btn" data-target="view-online-shopping"><i class="fa-solid fa-bag-shopping"></i><span>Online Shopping</span></button>
@@ -1055,6 +1058,55 @@
                                 </tbody>
                             </table>
                         </div>
+                    </div>
+                </section>
+            </div>
+
+            <div id="view-visa-review" class="dashboard-view hidden">
+                <section class="visa-proof">
+                    <div class="visa-proof-head glass-panel">
+                        <span class="home-section-kicker">Hokuriku VISA · bank-backed review</span>
+                        <h2>Statements, payments & ledger matching</h2>
+                        <p>Official document values are stored privately in Neon. Matches are read-only candidates based on date, amount and CC KU notes. An expense is never created, deleted, or paid twice by this view. These are historical screenshots, not a live bank connection.</p>
+                    </div>
+                    <div id="visa-evidence-unavailable" class="visa-proof-warning glass-panel">Loading evidence…</div>
+                    <div id="visa-evidence-content" class="hidden">
+                        <div class="visa-proof-kpis">
+                            <article class="visa-proof-kpi glass-panel"><span>Card credit limit</span><strong id="visa-credit-limit">—</strong><small>Bank snapshot <span id="visa-credit-date">—</span></small></article>
+                            <article class="visa-proof-kpi glass-panel"><span>Outstanding card usage</span><strong id="visa-used">—</strong><small>Not necessarily the amount due next month</small></article>
+                            <article class="visa-proof-kpi glass-panel"><span>Available credit</span><strong id="visa-available">—</strong><small>Credit limit less outstanding</small></article>
+                            <article class="visa-proof-kpi glass-panel"><span>November bill · provisional</span><strong id="visa-nov-bill">—</strong><small><span id="visa-nov-count">—</span> lines as of October 14</small></article>
+                            <article class="visa-proof-kpi glass-panel"><span>October bill · paid at bank</span><strong id="visa-oct-bill">—</strong><small>October 13 bank debit verified</small></article>
+                            <article class="visa-proof-kpi glass-panel"><span>Hokuriku Bank snapshot</span><strong id="visa-bank-balance">—</strong><small>October 14 · not the aggregate ledger balance</small></article>
+                        </div>
+                        <div class="visa-proof-grid" style="margin-top:1rem">
+                            <section class="visa-proof-panel glass-panel">
+                                <h3>Evidence calculations</h3>
+                                <div id="visa-proof-checks"></div>
+                                <p class="visa-proof-muted">Bank prior balance: <strong id="visa-bank-previous">—</strong>. Confirmed debit on <span id="visa-bank-payment-date">—</span>: <strong id="visa-bank-payment">—</strong>. September 10 VISA debit: <strong id="visa-september-payment">—</strong>.</p>
+                            </section>
+                            <section class="visa-proof-panel glass-panel">
+                                <h3>November ledger coverage</h3>
+                                <div class="visa-proof-check"><span>Imported from PDF to ledger</span><strong><span id="visa-import-count">—</span> · <span id="visa-import-sum">—</span></strong></div>
+                                <div class="visa-proof-check"><span>Existing CC KU candidates</span><strong><span id="visa-candidate-count">—</span> · <span id="visa-candidate-sum">—</span></strong></div>
+                                <div class="visa-proof-check"><span>1-day merchant/CC KU candidates</span><strong><span id="visa-shift-candidate-count">—</span> · <span id="visa-shift-candidate-sum">—</span></strong></div>
+                                <div class="visa-proof-check"><span>Date/amount-only candidates</span><strong><span id="visa-amount-candidate-count">—</span> · <span id="visa-amount-candidate-sum">—</span></strong></div>
+                                <div class="visa-proof-check"><span>Unmatched statement entries</span><strong><span id="visa-unmatched-count">—</span> · <span id="visa-unmatched-sum">—</span></strong></div>
+                                <p class="visa-proof-muted">Card outstanding differs from the provisional bill by <strong id="visa-credit-diff">—</strong>. This is not an adjustment instruction.</p>
+                            </section>
+                        </div>
+                        <div id="visa-matching-warning" class="visa-proof-warning glass-panel" style="margin-top:1rem"></div>
+                        <section class="visa-proof-panel glass-panel" style="margin-top:1rem">
+                            <h3>November statement lines · source evidence</h3>
+                            <p class="visa-proof-muted">Official merchant label and charged JPY. Matching consumes at most one ledger transaction per statement line; two legitimate equal-value charges remain two separate lines.</p>
+                            <div class="visa-proof-filters" role="group" aria-label="Statement line filters">
+                                <button type="button" class="active" data-visa-filter="all">All</button>
+                                <button type="button" data-visa-filter="matched">Candidates</button>
+                                <button type="button" data-visa-filter="missing">Not found</button>
+                            </div>
+                            <div id="visa-proof-rows" class="visa-proof-table"></div>
+                        </section>
+                        <div class="visa-proof-warning glass-panel" style="margin-top:1rem">The legacy manual adjustment action is temporarily disabled because its historical CC KU total does not distinguish already-paid statements from unpaid purchases. Bank statements and receipt evidence should be reviewed before promoting unmatched purchases into the main cash ledger.</div>
                     </div>
                 </section>
             </div>
