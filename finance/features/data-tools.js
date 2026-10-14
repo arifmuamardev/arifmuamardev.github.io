@@ -38,8 +38,44 @@
       String(item?.tempat || "").trim().toLowerCase(),
       Number(item?.pemasukan || 0).toFixed(2),
       Number(item?.pengeluaran || 0).toFixed(2),
-      String(item?.payment_type || "")
+      String(item?.payment_type || ""),
+      String(item?.note || "").trim().toLowerCase()
     ].join("|");
+  }
+
+  function getFlow(item) {
+    const income = Number(item?.pemasukan) || 0;
+    const expense = Number(item?.pengeluaran) || 0;
+    if (income > 0) return "income";
+    if (expense < 0) return "refund";
+    return "expense";
+  }
+
+  function buildStoreCategorySuggestions(posted) {
+    const history = new Map();
+
+    posted.forEach(item => {
+      const category = String(item?.kategori_normalized || item?.kategori || "").trim();
+      const store = String(item?.tempat || "").trim().toLowerCase();
+      if (!store || !category || category.toLowerCase() === "others") return;
+
+      const key = `${store}|${getFlow(item)}`;
+      if (!history.has(key)) history.set(key, new Map());
+      const counts = history.get(key);
+      counts.set(category, (counts.get(category) || 0) + 1);
+    });
+
+    const suggestions = new Map();
+    history.forEach((counts, key) => {
+      const ranked = [...counts.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+      const total = ranked.reduce((sum, [, count]) => sum + count, 0);
+      const [category, support] = ranked[0] || [];
+      const confidence = total > 0 ? support / total : 0;
+      if (category && support >= 3 && confidence >= 0.75) {
+        suggestions.set(key, { category, support, total, confidence });
+      }
+    });
+    return suggestions;
   }
 
   function analyze() {
@@ -53,7 +89,13 @@
       if (!signatureMap.has(signature)) signatureMap.set(signature, []);
       signatureMap.get(signature).push(item);
     });
-    const duplicateGroups = [...signatureMap.values()].filter(group => group.length > 1);
+    const duplicateGroups = [...signatureMap.values()]
+      .filter(group => group.length > 1)
+      .sort((a, b) =>
+        b.length - a.length ||
+        String(b[0]?.tanggal || "").localeCompare(String(a[0]?.tanggal || "")) ||
+        Number(a[0]?.id || 0) - Number(b[0]?.id || 0)
+      );
     const possibleDuplicateRows = duplicateGroups.reduce((sum, group) => sum + group.length, 0);
 
     const missingEssentials = cash.filter(item =>
@@ -74,9 +116,21 @@
       !/\bRp\b/i.test(String(item?.note || ""))
     );
 
-    const othersRows = cash.filter(item =>
+    const othersRows = posted.filter(item =>
       String(item?.kategori_normalized || item?.kategori || "").trim().toLowerCase() === "others"
     );
+    const suggestionMap = buildStoreCategorySuggestions(posted);
+    const categoryReviewRows = othersRows.map(item => {
+      const store = String(item?.tempat || "").trim().toLowerCase();
+      const suggestion = store ? suggestionMap.get(`${store}|${getFlow(item)}`) || null : null;
+      return { item, suggestion };
+    }).sort((a, b) => {
+      const ac = a.suggestion?.confidence || 0;
+      const bc = b.suggestion?.confidence || 0;
+      return bc - ac ||
+        (b.suggestion?.support || 0) - (a.suggestion?.support || 0) ||
+        String(b.item?.tanggal || "").localeCompare(String(a.item?.tanggal || ""));
+    });
 
     const postedDates = posted
       .map(item => String(item?.tanggal || "").slice(0, 10))
@@ -102,6 +156,7 @@
       foreignCashBalanceGaps,
       unexplainedCashBalanceGaps,
       othersRows,
+      categoryReviewRows,
       latestPosted,
       earliestPosted,
       connectedRows
@@ -111,6 +166,194 @@
   function setText(id, value) {
     const el = document.getElementById(id);
     if (el) el.textContent = String(value);
+  }
+
+  function moneyFor(item) {
+    const income = Number(item?.pemasukan) || 0;
+    const expense = Number(item?.pengeluaran) || 0;
+    if (income > 0) return `+¥${formatNumber(income)}`;
+    if (expense < 0) return `+¥${formatNumber(Math.abs(expense))}`;
+    return `−¥${formatNumber(expense)}`;
+  }
+
+  function renderDuplicateQueue(a) {
+    const list = document.getElementById("duplicate-review-list");
+    const count = document.getElementById("duplicate-review-count");
+    if (count) count.textContent = `${a.duplicateGroups.length} group${a.duplicateGroups.length === 1 ? "" : "s"}`;
+    if (!list) return;
+    list.replaceChildren();
+
+    if (!a.duplicateGroups.length) {
+      const empty = document.createElement("div");
+      empty.className = "cleanup-empty";
+      empty.textContent = "No exact duplicate signatures detected.";
+      list.appendChild(empty);
+      return;
+    }
+
+    a.duplicateGroups.slice(0, 12).forEach((group, index) => {
+      const sample = group[0];
+      const card = document.createElement("article");
+      card.className = "cleanup-card";
+
+      const head = document.createElement("div");
+      head.className = "cleanup-card-head";
+
+      const copy = document.createElement("div");
+      const title = document.createElement("strong");
+      title.textContent = sample?.item_normalized || sample?.item || "Transaction";
+      const meta = document.createElement("span");
+      meta.textContent = [
+        String(sample?.tanggal || "").slice(0, 10),
+        sample?.tempat || "No store",
+        moneyFor(sample),
+        sample?.payment_type === "cashless" ? "Digital" : "Cash"
+      ].join(" · ");
+      copy.append(title, meta);
+
+      const badge = document.createElement("span");
+      badge.className = "cleanup-count-badge";
+      badge.textContent = `${group.length} rows`;
+      head.append(copy, badge);
+
+      const note = document.createElement("p");
+      note.textContent = "Same date, description, category, store, amount, payment type, and note. This can still represent legitimate repeated items.";
+
+      const actions = document.createElement("div");
+      actions.className = "cleanup-id-actions";
+      group.slice(0, 10).forEach(item => {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.dataset.openTransaction = String(item.id);
+        button.textContent = `#${item.id}`;
+        actions.appendChild(button);
+      });
+      if (group.length > 10) {
+        const more = document.createElement("span");
+        more.className = "cleanup-more";
+        more.textContent = `+${group.length - 10} more`;
+        actions.appendChild(more);
+      }
+
+      card.append(head, note, actions);
+      list.appendChild(card);
+    });
+
+    if (a.duplicateGroups.length > 12) {
+      const foot = document.createElement("div");
+      foot.className = "cleanup-queue-foot";
+      foot.textContent = `Showing 12 of ${a.duplicateGroups.length} groups. Use the cash CSV export for a complete offline review.`;
+      list.appendChild(foot);
+    }
+  }
+
+  function renderCategoryQueue(a) {
+    const list = document.getElementById("category-review-list");
+    const count = document.getElementById("category-review-count");
+    const suggested = a.categoryReviewRows.filter(row => row.suggestion);
+    if (count) count.textContent = `${suggested.length} suggested · ${a.othersRows.length} total Others`;
+    if (!list) return;
+    list.replaceChildren();
+
+    if (!a.categoryReviewRows.length) {
+      const empty = document.createElement("div");
+      empty.className = "cleanup-empty";
+      empty.textContent = "No posted transactions use the Others category.";
+      list.appendChild(empty);
+      return;
+    }
+
+    const rows = [
+      ...suggested,
+      ...a.categoryReviewRows.filter(row => !row.suggestion)
+    ].slice(0, 16);
+
+    rows.forEach(({ item, suggestion }) => {
+      const card = document.createElement("article");
+      card.className = "cleanup-card category-cleanup-card";
+
+      const head = document.createElement("div");
+      head.className = "cleanup-card-head";
+
+      const copy = document.createElement("div");
+      const title = document.createElement("strong");
+      title.textContent = item?.item_normalized || item?.item || "Transaction";
+      const meta = document.createElement("span");
+      meta.textContent = [
+        `#${item?.id}`,
+        String(item?.tanggal || "").slice(0, 10),
+        item?.tempat || "No store",
+        moneyFor(item)
+      ].join(" · ");
+      copy.append(title, meta);
+
+      const badge = document.createElement("span");
+      badge.className = suggestion ? "cleanup-suggestion-badge" : "cleanup-manual-badge";
+      badge.textContent = suggestion ? "Suggestion" : "Manual";
+      head.append(copy, badge);
+
+      const detail = document.createElement("p");
+      if (suggestion) {
+        detail.textContent = `Store history suggests “${suggestion.category}” with ${Math.round(suggestion.confidence * 100)}% confidence (${suggestion.support}/${suggestion.total} comparable records).`;
+      } else {
+        detail.textContent = "No sufficiently strong store-history pattern was found. Review this transaction manually.";
+      }
+
+      const actions = document.createElement("div");
+      actions.className = "cleanup-card-actions";
+
+      const review = document.createElement("button");
+      review.type = "button";
+      review.className = "cleanup-secondary-btn";
+      review.dataset.openTransaction = String(item.id);
+      review.textContent = "Review";
+      actions.appendChild(review);
+
+      if (suggestion) {
+        const edit = document.createElement("button");
+        edit.type = "button";
+        edit.className = "cleanup-primary-btn";
+        edit.dataset.editTransaction = String(item.id);
+        edit.dataset.suggestedCategory = suggestion.category;
+        edit.textContent = `Edit as ${suggestion.category}`;
+        actions.appendChild(edit);
+      }
+
+      card.append(head, detail, actions);
+      list.appendChild(card);
+    });
+
+    if (a.categoryReviewRows.length > 16) {
+      const foot = document.createElement("div");
+      foot.className = "cleanup-queue-foot";
+      foot.textContent = `Showing 16 of ${a.categoryReviewRows.length} posted Others rows. Strong suggestions are shown first.`;
+      list.appendChild(foot);
+    }
+  }
+
+  function renderCleanupQueues(a) {
+    renderDuplicateQueue(a);
+    renderCategoryQueue(a);
+  }
+
+  function dispatchTransactionAction(target) {
+    const openButton = target.closest("[data-open-transaction]");
+    if (openButton) {
+      window.dispatchEvent(new CustomEvent("budget:open-transaction", {
+        detail: { id: Number(openButton.dataset.openTransaction) }
+      }));
+      return;
+    }
+
+    const editButton = target.closest("[data-edit-transaction]");
+    if (editButton) {
+      window.dispatchEvent(new CustomEvent("budget:edit-transaction", {
+        detail: {
+          id: Number(editButton.dataset.editTransaction),
+          suggestedCategory: editButton.dataset.suggestedCategory || ""
+        }
+      }));
+    }
   }
 
   function renderChecks(a) {
@@ -202,6 +445,7 @@
     setText("data-last-backup", lastBackup || "No local export recorded yet");
 
     renderChecks(a);
+    renderCleanupQueues(a);
   }
 
   function safeCsvCell(value) {
@@ -320,6 +564,8 @@
     document.getElementById("data-export-json")?.addEventListener("click", exportJson);
     document.getElementById("data-export-csv")?.addEventListener("click", exportCashCsv);
     document.getElementById("data-refresh-checks")?.addEventListener("click", render);
+    document.getElementById("duplicate-review-list")?.addEventListener("click", event => dispatchTransactionAction(event.target));
+    document.getElementById("category-review-list")?.addEventListener("click", event => dispatchTransactionAction(event.target));
     render();
   }
 

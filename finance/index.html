@@ -20,11 +20,11 @@
     <link rel="stylesheet" href="styles.css?v=4.3.0">
     <link rel="stylesheet" href="features/transaction-editor.css?v=4.4.0">
     <link rel="stylesheet" href="features/transaction-history.css?v=4.5.0">
-    <link rel="stylesheet" href="features/data-tools.css?v=4.6.0">
-    <script src="features/transaction-editor.js?v=4.4.0" defer></script>
+    <link rel="stylesheet" href="features/data-tools.css?v=4.7.0">
+    <script src="features/transaction-editor.js?v=4.7.0" defer></script>
     <script src="features/transaction-history.js?v=4.5.0" defer></script>
-    <script src="features/data-tools.js?v=4.6.0" defer></script>
-    <script src="app.js?v=4.6.0" defer></script>
+    <script src="features/data-tools.js?v=4.7.0" defer></script>
+    <script src="app.js?v=4.7.0" defer></script>
 </head>
 <body class="dark-theme">
     <div id="auth-gate" class="auth-gate" aria-live="polite">
@@ -2926,6 +2926,47 @@
                             </div>
                         </section>
                     </div>
+
+                    <section class="cleanup-workspace" aria-label="Cleanup review queues">
+                        <div class="cleanup-heading glass-panel">
+                            <div>
+                                <span class="home-section-kicker">Review, not auto-fix</span>
+                                <h3>Cleanup review queue</h3>
+                                <p>These are candidates for human review. No row is deleted or recategorized automatically; edits still go through the protected transaction editor and audit trail.</p>
+                            </div>
+                            <span class="cleanup-safety-badge"><i class="fa-solid fa-user-check"></i> Human confirmation required</span>
+                        </div>
+
+                        <div class="cleanup-grid">
+                            <section class="data-panel glass-panel">
+                                <div class="data-panel-header">
+                                    <div>
+                                        <span class="home-section-kicker">Potential duplicates</span>
+                                        <h3>Exact-signature groups</h3>
+                                    </div>
+                                    <span id="duplicate-review-count" class="cleanup-panel-count">0 groups</span>
+                                </div>
+                                <p class="cleanup-intro">Exact matches can still be legitimate repeated purchases. Open individual records and compare context before taking any action.</p>
+                                <div id="duplicate-review-list" class="cleanup-list">
+                                    <div class="cleanup-empty">Calculating duplicate candidates…</div>
+                                </div>
+                            </section>
+
+                            <section class="data-panel glass-panel">
+                                <div class="data-panel-header">
+                                    <div>
+                                        <span class="home-section-kicker">Category cleanup</span>
+                                        <h3>Review “Others”</h3>
+                                    </div>
+                                    <span id="category-review-count" class="cleanup-panel-count">0</span>
+                                </div>
+                                <p class="cleanup-intro">Suggestions appear only when the same store and transaction flow have a strong known-category pattern. Saving remains manual.</p>
+                                <div id="category-review-list" class="cleanup-list">
+                                    <div class="cleanup-empty">Calculating category suggestions…</div>
+                                </div>
+                            </section>
+                        </div>
+                    </section>
                 </section>
             </div>
 

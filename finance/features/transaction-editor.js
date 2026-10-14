@@ -194,7 +194,7 @@
     document.getElementById("transaction-editor-guard")?.classList.toggle("hidden", !locked);
   }
 
-  function openBase({ mode, item = null }) {
+  function openBase({ mode, item = null, overrides = {} }) {
     buildModal();
     state.current = item;
 
@@ -212,7 +212,9 @@
     if (title) title.textContent = editing ? "Edit transaction" : "Add transaction";
     if (kicker) kicker.textContent = editing ? "Owner-only correction" : "Manual ledger entry";
     if (subtitle) subtitle.textContent = editing
-      ? "Update this ledger record without exposing delete controls."
+      ? overrides.category
+        ? `Review the suggested category “${overrides.category}” before saving.`
+        : "Update this ledger record without exposing delete controls."
       : "Save one new transaction to your private ledger.";
     if (save) save.innerHTML = editing
       ? '<i class="fa-solid fa-floppy-disk"></i> Save changes'
@@ -234,7 +236,9 @@
     if (itemEl) itemEl.value = editing ? String(item.item_normalized || item.item || "") : "";
     if (amountEl) amountEl.value = editing ? String(inferAmount(item) || "") : "";
     if (paymentEl) paymentEl.value = editing ? (item.payment_type === "cash" ? "cash" : "cashless") : "cashless";
-    if (categoryEl) categoryEl.value = editing ? String(item.kategori_normalized || item.kategori || "Others") : "";
+    if (categoryEl) categoryEl.value = editing
+      ? String(overrides.category || item.kategori_normalized || item.kategori || "Others")
+      : String(overrides.category || "");
     if (storeEl) storeEl.value = editing ? String(item.tempat || "") : "";
     if (noteEl) noteEl.value = editing ? String(item.note || "") : "";
 
@@ -255,9 +259,9 @@
     openBase({ mode: "add" });
   }
 
-  function openEdit(item) {
+  function openEdit(item, overrides = {}) {
     if (!item) return;
-    openBase({ mode: "edit", item });
+    openBase({ mode: "edit", item, overrides });
   }
 
   function close() {
