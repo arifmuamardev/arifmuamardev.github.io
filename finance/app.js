@@ -1589,7 +1589,6 @@ async function fetchAndInitData() {
             bni: bniData,
             muamalat: muamalatData,
             gopay: gopayData,
-            audit: payload.audit || [],
             settings
         });
 
