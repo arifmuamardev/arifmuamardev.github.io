@@ -691,6 +691,7 @@ function closeTransactionDrawer() {
     drawer?.classList.remove("open");
     drawer?.setAttribute("aria-hidden", "true");
     scrim?.classList.add("hidden");
+    window.TransactionEditor?.setCurrent(null);
 }
 
 function openTransactionDrawer(item) {
@@ -737,6 +738,7 @@ function openTransactionDrawer(item) {
         if (el) el.textContent = String(value);
     });
 
+    window.TransactionEditor?.setCurrent(item);
     scrim.classList.remove("hidden");
     drawer.classList.add("open");
     drawer.setAttribute("aria-hidden", "false");
@@ -1330,6 +1332,19 @@ function setupFilters() {
 
 
 function setupTransactionWorkspace() {
+    window.TransactionEditor?.init();
+
+    window.addEventListener("budget:transaction-saved", async event => {
+        closeTransactionDrawer();
+        const mode = event.detail?.mode === "updated" ? "updated" : "added";
+        showToast(`Transaction ${mode} successfully.`, "success");
+        try {
+            await fetchAndInitData();
+        } catch (error) {
+            console.error("Refresh after transaction save failed:", error);
+        }
+    });
+
     document.querySelectorAll("[data-transaction-payment]").forEach(chip => {
         chip.addEventListener("click", () => {
             activeTransactionPaymentFilter = chip.dataset.transactionPayment || "all";
@@ -1518,6 +1533,7 @@ async function fetchAndInitData() {
             setupTransactionWorkspace();
             controlsInitialized = true;
         }
+        window.TransactionEditor?.setRows(cashData);
 
         const filtered = getFilteredData();
         const filteredW = getFilteredWithdrawals();
