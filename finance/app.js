@@ -2144,20 +2144,62 @@ async function bootstrapApplication() {
 
     try {
         window.BudgetCloud.setGateState("loading");
+
+        const callbackError = window.BudgetCloud.getCallbackError?.() || null;
+        const resetToken = window.BudgetCloud.getResetToken?.() || null;
+
+        if (resetToken) {
+            window.BudgetCloud.setGateState(
+                "login",
+                "Set a password for the existing finance account, then verify it once to link Google."
+            );
+            window.BudgetCloud.setRecoveryUI?.({ open: true, reset: true });
+            return;
+        }
+
         const user = await window.BudgetCloud.getCurrentUser();
+
+        if (callbackError) {
+            console.warn("Authentication callback returned an error:", callbackError.code || callbackError.message);
+            window.BudgetCloud.setGateState("login", callbackError.message);
+            window.BudgetCloud.setRecoveryUI?.({
+                open: true,
+                canLink: Boolean(user)
+            });
+            return;
+        }
+
         if (!user) {
             window.BudgetCloud.setGateState("login");
             return;
         }
+
         const emailEl = document.getElementById("signed-in-email");
         if (emailEl) emailEl.textContent = user.email || "Authenticated";
+
         await fetchAndInitData();
         window.BudgetCloud.setGateState("app");
+        window.BudgetCloud.clearAuthQuery?.();
         initReconciliation();
     } catch (error) {
         console.error("Application bootstrap failed:", error);
-        try { await window.BudgetCloud?.signOut({ reload: false }); } catch (signOutError) { console.warn("Session cleanup failed:", signOutError); }
-        window.BudgetCloud?.setGateState("login", error.message || "Your session could not be verified. Please sign in again.");
+
+        const message = error.message || "Your session could not be verified. Please sign in again.";
+        const isUnauthorizedOwner = /not authorized for this finance dashboard/i.test(message);
+
+        if (isUnauthorizedOwner) {
+            try {
+                await window.BudgetCloud?.signOut({ reload: false });
+            } catch (signOutError) {
+                console.warn("Unauthorized-session cleanup failed:", signOutError);
+            }
+        }
+
+        window.BudgetCloud?.setGateState("login", message);
+        window.BudgetCloud?.setRecoveryUI?.({
+            open: /account not linked|password|credential/i.test(message),
+            canLink: !isUnauthorizedOwner
+        });
     }
 }
 

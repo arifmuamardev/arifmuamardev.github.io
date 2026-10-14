@@ -67,15 +67,37 @@ import { createClient } from "https://cdn.jsdelivr.net/npm/@neondatabase/neon-js
       params.get("error_description") ||
       params.get("message") ||
       code.replaceAll("_", " ");
-    return new Error(`Google sign-in failed: ${description}`);
+    const error = new Error(`Google sign-in failed: ${description}`);
+    error.code = code;
+    return error;
+  }
+
+  function getResetToken() {
+    return new URLSearchParams(window.location.search).get("token");
+  }
+
+  function clearAuthQuery() {
+    const url = new URL(window.location.href);
+    ["error", "error_description", "message", "token", "auth"].forEach(key => {
+      url.searchParams.delete(key);
+    });
+    const query = url.searchParams.toString();
+    const clean = `${url.pathname}${query ? `?${query}` : ""}${url.hash}`;
+    window.history.replaceState(null, "", clean);
+  }
+
+  function setRecoveryUI({ open = false, canLink = false, reset = false } = {}) {
+    const panel = document.getElementById("auth-recovery-panel");
+    const linkButton = document.getElementById("auth-link-google");
+    const resetForm = document.getElementById("auth-reset-form");
+    if (panel) panel.open = Boolean(open);
+    if (linkButton) linkButton.classList.toggle("hidden", !canLink);
+    if (resetForm) resetForm.classList.toggle("hidden", !reset);
   }
 
   async function getCurrentUser() {
     const neon = getClient();
     if (!neon) return null;
-
-    const callbackError = getCallbackError();
-    if (callbackError) throw callbackError;
 
     const result = await neon.auth.getSession();
     if (result?.error) throw result.error;
@@ -95,6 +117,69 @@ import { createClient } from "https://cdn.jsdelivr.net/npm/@neondatabase/neon-js
       provider: "google",
       callbackURL,
       errorCallbackURL: callbackURL
+    });
+    if (result?.error) throw result.error;
+    return result?.data || null;
+  }
+
+  async function signInWithEmail({ email, password }) {
+    const neon = getClient();
+    if (!neon) throw new Error("Neon is not configured.");
+    if (!neon.auth?.signIn?.email) throw new Error("Email sign-in is unavailable in this Auth client.");
+
+    const result = await neon.auth.signIn.email({
+      email: String(email || "").trim(),
+      password: String(password || ""),
+      rememberMe: true
+    });
+    if (result?.error) throw result.error;
+    return result?.data || null;
+  }
+
+  async function requestPasswordReset(email) {
+    const neon = getClient();
+    if (!neon) throw new Error("Neon is not configured.");
+    if (typeof neon.auth?.requestPasswordReset !== "function") {
+      throw new Error("Password recovery is unavailable in this Auth client.");
+    }
+
+    const redirectTo = `${window.location.origin}${window.location.pathname}?auth=reset`;
+    const result = await neon.auth.requestPasswordReset({
+      email: String(email || "").trim(),
+      redirectTo
+    });
+    if (result?.error) throw result.error;
+    return result?.data || null;
+  }
+
+  async function resetPassword({ token, newPassword }) {
+    const neon = getClient();
+    if (!neon) throw new Error("Neon is not configured.");
+    if (typeof neon.auth?.resetPassword !== "function") {
+      throw new Error("Password reset is unavailable in this Auth client.");
+    }
+
+    const result = await neon.auth.resetPassword({
+      newPassword: String(newPassword || ""),
+      token: String(token || "")
+    });
+    if (result?.error) throw result.error;
+    return result?.data || null;
+  }
+
+  async function linkGoogle() {
+    const neon = getClient();
+    if (!neon) throw new Error("Neon is not configured.");
+    if (typeof neon.auth?.linkSocial !== "function") {
+      throw new Error("Google account linking is unavailable in this Auth client.");
+    }
+
+    const callbackURL = `${window.location.origin}${window.location.pathname}?auth=linked`;
+    const errorCallbackURL = `${window.location.origin}${window.location.pathname}?auth=link-error`;
+    const result = await neon.auth.linkSocial({
+      provider: "google",
+      callbackURL,
+      errorCallbackURL
     });
     if (result?.error) throw result.error;
     return result?.data || null;
@@ -279,7 +364,14 @@ import { createClient } from "https://cdn.jsdelivr.net/npm/@neondatabase/neon-js
 
   function bindAuthUI() {
     const form = document.getElementById("auth-form");
+    const recoveryForm = document.getElementById("auth-recovery-form");
+    const resetRequest = document.getElementById("auth-reset-request");
+    const resetForm = document.getElementById("auth-reset-form");
+    const linkButton = document.getElementById("auth-link-google");
     const logout = document.getElementById("logout-btn");
+
+    const resetToken = getResetToken();
+    if (resetToken) setRecoveryUI({ open: true, reset: true });
 
     if (form && !form.dataset.bound) {
       form.dataset.bound = "1";
@@ -304,6 +396,114 @@ import { createClient } from "https://cdn.jsdelivr.net/npm/@neondatabase/neon-js
       });
     }
 
+    if (recoveryForm && !recoveryForm.dataset.bound) {
+      recoveryForm.dataset.bound = "1";
+      recoveryForm.addEventListener("submit", async event => {
+        event.preventDefault();
+        const email = document.getElementById("auth-recovery-email")?.value?.trim();
+        const password = document.getElementById("auth-recovery-password")?.value || "";
+        const button = recoveryForm.querySelector("button[type='submit']");
+        const old = button?.innerHTML;
+
+        try {
+          if (!email || !password) throw new Error("Enter your email and password.");
+          if (button) {
+            button.disabled = true;
+            button.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Verifying…';
+          }
+          setGateState("login", "Verifying the existing account…");
+          await signInWithEmail({ email, password });
+          const user = await getCurrentUser();
+          if (!user) throw new Error("Credential sign-in did not create a session.");
+
+          setRecoveryUI({ open: true, canLink: true });
+          setGateState("login", "Existing account verified. Redirecting to Google to link it permanently…");
+          await linkGoogle();
+        } catch (error) {
+          setGateState("login", error.message || "Account recovery sign-in failed.");
+          setRecoveryUI({ open: true });
+          if (button) {
+            button.disabled = false;
+            button.innerHTML = old;
+          }
+        }
+      });
+    }
+
+    if (resetRequest && !resetRequest.dataset.bound) {
+      resetRequest.dataset.bound = "1";
+      resetRequest.addEventListener("click", async () => {
+        const email = document.getElementById("auth-recovery-email")?.value?.trim();
+        const old = resetRequest.innerHTML;
+        try {
+          if (!email) throw new Error("Enter your email first.");
+          resetRequest.disabled = true;
+          resetRequest.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Sending…';
+          await requestPasswordReset(email);
+          setGateState("login", "If the account exists, a password reset email has been sent. Open that email and return here through its secure link.");
+          setRecoveryUI({ open: true });
+        } catch (error) {
+          setGateState("login", error.message || "Password reset could not be started.");
+          setRecoveryUI({ open: true });
+        } finally {
+          resetRequest.disabled = false;
+          resetRequest.innerHTML = old;
+        }
+      });
+    }
+
+    if (resetForm && !resetForm.dataset.bound) {
+      resetForm.dataset.bound = "1";
+      resetForm.addEventListener("submit", async event => {
+        event.preventDefault();
+        const token = getResetToken();
+        const password = document.getElementById("auth-new-password")?.value || "";
+        const confirm = document.getElementById("auth-confirm-password")?.value || "";
+        const button = resetForm.querySelector("button[type='submit']");
+        const old = button?.innerHTML;
+
+        try {
+          if (!token) throw new Error("The password reset token is missing.");
+          if (password.length < 8) throw new Error("Use a password with at least 8 characters.");
+          if (password !== confirm) throw new Error("The two passwords do not match.");
+          if (button) {
+            button.disabled = true;
+            button.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Setting password…';
+          }
+          await resetPassword({ token, newPassword: password });
+          clearAuthQuery();
+          resetForm.reset();
+          setRecoveryUI({ open: true, reset: false });
+          setGateState("login", "Password set. Sign in below once to verify the existing account and link Google.");
+        } catch (error) {
+          setGateState("login", error.message || "Password reset failed.");
+          setRecoveryUI({ open: true, reset: true });
+        } finally {
+          if (button) {
+            button.disabled = false;
+            button.innerHTML = old;
+          }
+        }
+      });
+    }
+
+    if (linkButton && !linkButton.dataset.bound) {
+      linkButton.dataset.bound = "1";
+      linkButton.addEventListener("click", async () => {
+        const old = linkButton.innerHTML;
+        try {
+          linkButton.disabled = true;
+          linkButton.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Opening Google…';
+          await linkGoogle();
+        } catch (error) {
+          setGateState("login", error.message || "Google linking could not be started.");
+          setRecoveryUI({ open: true, canLink: true });
+          linkButton.disabled = false;
+          linkButton.innerHTML = old;
+        }
+      });
+    }
+
     if (logout && !logout.dataset.bound) {
       logout.dataset.bound = "1";
       logout.addEventListener("click", () => signOut().catch(error => {
@@ -312,9 +512,12 @@ import { createClient } from "https://cdn.jsdelivr.net/npm/@neondatabase/neon-js
       }));
     }
   }
-
   window.BudgetCloud = {
     isConfigured,
+    getCallbackError,
+    getResetToken,
+    clearAuthQuery,
+    setRecoveryUI,
     getCurrentUser,
     loadAll,
     reconcile,
@@ -324,6 +527,10 @@ import { createClient } from "https://cdn.jsdelivr.net/npm/@neondatabase/neon-js
     getTransactionHistory,
     getAuditCount,
     getAllAuditHistory,
+    signInWithEmail,
+    requestPasswordReset,
+    resetPassword,
+    linkGoogle,
     signOut,
     bindAuthUI,
     setGateState

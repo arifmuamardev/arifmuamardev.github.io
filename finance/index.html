@@ -16,8 +16,8 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.min.js"></script>
     <!-- Public Neon endpoints live in config.js; database credentials never ship to the browser. -->
     <script src="config.js?v=4.0.1"></script>
-    <script type="module" src="cloud.js?v=4.9.0"></script>
-    <link rel="stylesheet" href="styles.css?v=4.3.0">
+    <script type="module" src="cloud.js?v=4.9.1"></script>
+    <link rel="stylesheet" href="styles.css?v=4.9.1">
     <link rel="stylesheet" href="features/transaction-editor.css?v=4.4.0">
     <link rel="stylesheet" href="features/transaction-history.css?v=4.5.0">
     <link rel="stylesheet" href="features/data-tools.css?v=4.7.0">
@@ -28,7 +28,7 @@
     <script src="features/data-tools.js?v=4.7.0" defer></script>
     <script src="features/monthly-budget.js?v=4.8.0" defer></script>
     <script src="features/monthly-review.js?v=4.9.0" defer></script>
-    <script src="app.js?v=4.9.0" defer></script>
+    <script src="app.js?v=4.9.1" defer></script>
 </head>
 <body class="dark-theme">
     <div id="auth-gate" class="auth-gate" aria-live="polite">
@@ -58,6 +58,42 @@
                 <form id="auth-form" class="auth-form">
                     <button type="submit" class="primary-action"><i class="fa-brands fa-google"></i> Continue with Google</button>
                 </form>
+
+                <details id="auth-recovery-panel" class="auth-recovery">
+                    <summary><i class="fa-solid fa-screwdriver-wrench"></i> Google says “account not linked”?</summary>
+                    <div class="auth-recovery-body">
+                        <p>Verify the existing finance account once, then link Google explicitly. This keeps the same owner identity and financial data.</p>
+
+                        <form id="auth-recovery-form" class="auth-form auth-recovery-form">
+                            <label for="auth-recovery-email">Existing account email</label>
+                            <input id="auth-recovery-email" type="email" autocomplete="email" required placeholder="you@example.com">
+
+                            <label for="auth-recovery-password">Password</label>
+                            <input id="auth-recovery-password" type="password" autocomplete="current-password" required placeholder="Your existing or newly reset password">
+
+                            <button type="submit" class="primary-action"><i class="fa-solid fa-link"></i> Verify & link Google</button>
+                            <button type="button" id="auth-reset-request" class="secondary-action"><i class="fa-solid fa-envelope"></i> Send password setup/reset email</button>
+                        </form>
+
+                        <form id="auth-reset-form" class="auth-form auth-reset-form hidden">
+                            <div class="auth-recovery-callout">
+                                <i class="fa-solid fa-key"></i>
+                                <span>Set a temporary password for the existing account. Afterward, use “Verify & link Google” once.</span>
+                            </div>
+
+                            <label for="auth-new-password">New password</label>
+                            <input id="auth-new-password" type="password" autocomplete="new-password" minlength="8" required placeholder="At least 8 characters">
+
+                            <label for="auth-confirm-password">Confirm password</label>
+                            <input id="auth-confirm-password" type="password" autocomplete="new-password" minlength="8" required placeholder="Repeat the password">
+
+                            <button type="submit" class="primary-action"><i class="fa-solid fa-key"></i> Set password</button>
+                        </form>
+
+                        <button type="button" id="auth-link-google" class="primary-action hidden"><i class="fa-brands fa-google"></i> Link Google now</button>
+                    </div>
+                </details>
+
                 <div class="privacy-note"><i class="fa-solid fa-user-shield"></i><span>Authentication alone does not grant data access. The database also verifies the authorized owner account.</span></div>
                 <p id="auth-feedback" class="auth-feedback hidden"></p>
             </div>
