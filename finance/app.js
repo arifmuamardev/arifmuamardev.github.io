@@ -1394,6 +1394,7 @@ function setupTransactionWorkspace() {
     window.TransactionEditor?.init();
     window.MonthlyBudget?.init();
     window.MonthlyReview?.init();
+    window.FinanceForecast?.init();
 
     window.addEventListener("budget:data-tools-error", event => {
         showToast(event.detail?.message || "Data export failed.", "error");
@@ -1665,6 +1666,10 @@ async function fetchAndInitData() {
             cash: cashData,
             budgets: payload.budgets || []
         });
+        window.FinanceForecast?.setData({
+            cash: cashData,
+            budgets: payload.budgets || []
+        });
 
         const filtered = getFilteredData();
         const filteredW = getFilteredWithdrawals();
@@ -1727,6 +1732,9 @@ function initNavigation() {
                 } else if (targetViewId === "view-review") {
                     topBarTitle.textContent = "Monthly Review";
                     topBarDesc.textContent = "Close a month with income, spending, budget variance, and key drivers";
+                } else if (targetViewId === "view-forecast") {
+                    topBarTitle.textContent = "Forecast";
+                    topBarDesc.textContent = "Separate known commitments from conservative historical scenarios";
                 } else if (targetViewId === "view-transactions") {
                     topBarTitle.textContent = "Transactions";
                     topBarDesc.textContent = "Search, filter, and inspect your complete ledger";
@@ -1807,6 +1815,8 @@ function initNavigation() {
                 window.MonthlyBudget?.render();
             } else if (targetViewId === "view-review") {
                 window.MonthlyReview?.render();
+            } else if (targetViewId === "view-forecast") {
+                window.FinanceForecast?.render();
             } else if (targetViewId === "view-income") {
                 if (incomeMonthlyChart) incomeMonthlyChart.resize();
                 if (incomeCategoryChart) incomeCategoryChart.resize();
