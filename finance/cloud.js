@@ -141,12 +141,13 @@ import { createClient } from "https://cdn.jsdelivr.net/npm/@neondatabase/neon-js
       throw new Error("This Google account is not authorized for this finance dashboard.");
     }
 
-    const [cash, withdrawals, bni, muamalat, gopay] = await Promise.all([
+    const [cash, withdrawals, bni, muamalat, gopay, audit] = await Promise.all([
       fetchAll("cash_transactions", [{ column: "tanggal" }, { column: "id" }]),
       fetchAll("atm_transactions", [{ column: "tanggal" }, { column: "id" }]),
       fetchAll("bni_transactions", [{ column: "date" }, { column: "id" }]),
       fetchAll("muamalat_transactions", [{ column: "date" }, { column: "id" }]),
-      fetchAll("gopay_transactions", [{ column: "date" }, { column: "id" }])
+      fetchAll("gopay_transactions", [{ column: "date" }, { column: "id" }]),
+      fetchAll("cash_transaction_audit", [{ column: "changed_at" }, { column: "audit_id" }])
     ]);
 
     return {
@@ -155,6 +156,7 @@ import { createClient } from "https://cdn.jsdelivr.net/npm/@neondatabase/neon-js
       bni,
       muamalat,
       gopay,
+      audit,
       settings: settingsResult.data
     };
   }
