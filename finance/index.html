@@ -29,6 +29,7 @@
     <link rel="stylesheet" href="features/visa-review.css?v=5.4.0">
     <link rel="stylesheet" href="features/tokopedia-proof.css?v=5.5.0">
     <link rel="stylesheet" href="features/flow-audit.css?v=5.7.0">
+    <link rel="stylesheet" href="features/transfer-proof.css?v=5.8.0">
     <script src="features/category-standards.js?v=5.6.0" defer></script>
     <script src="features/transaction-editor.js?v=5.6.0" defer></script>
     <script src="features/transaction-history.js?v=4.5.0" defer></script>
@@ -37,12 +38,13 @@
     <script src="features/monthly-review.js?v=5.7.0" defer></script>
     <script src="features/flow-classifier.js?v=5.7.0" defer></script>
     <script src="features/flow-audit.js?v=5.7.0" defer></script>
+    <script src="features/transfer-proof.js?v=5.8.0" defer></script>
     <script src="features/forecast.js?v=5.7.0" defer></script>
     <script src="features/data-integrity.js?v=5.2.0" defer></script>
     <script src="features/account-evidence.js?v=5.3.0" defer></script>
     <script src="features/visa-review.js?v=5.4.0" defer></script>
     <script src="features/tokopedia-proof.js?v=5.5.0" defer></script>
-    <script src="app.js?v=5.7.0" defer></script>
+    <script src="app.js?v=5.8.0" defer></script>
 </head>
 <body class="dark-theme">
     <div id="auth-gate" class="auth-gate" aria-live="polite">
@@ -144,6 +146,7 @@
                     <button class="nav-btn" data-target="view-reconciliation"><i class="fa-solid fa-scale-balanced"></i><span>Reconciliation</span></button>
                     <button class="nav-btn" data-target="view-account-evidence"><i class="fa-solid fa-building-columns"></i><span>Account Evidence</span></button>
                     <button class="nav-btn" data-target="view-flow-audit"><i class="fa-solid fa-arrows-left-right-to-line"></i><span>Spending vs Transfers</span></button>
+                    <button class="nav-btn" data-target="view-transfer-proof"><i class="fa-solid fa-shield-halved"></i><span>Transfer Verification</span></button>
                 </div>
 
                 <details class="sidebar-disclosure">
@@ -636,6 +639,51 @@
                         </section>
                     </div>
                 </section>
+            </div>
+
+            <div id="view-transfer-proof" class="dashboard-view hidden">
+              <section class="transfer-proof">
+                <div class="transfer-proof-header glass-panel">
+                  <span class="home-section-kicker">Authenticated bank statement evidence · read-only</span>
+                  <h2>Transfer &amp; Account Verification</h2>
+                  <p>Match ledger transfers against BNI, Muamalat and GoPay statement entries using signed original IDR amount and posting date. A date/amount match supports the source debit but does not prove the transfer purpose, beneficiary, or legal ownership. Japanese account transfers need Japanese transaction statements; Japanese bank balance screenshots alone are not sufficient.</p>
+                  <p class="transfer-proof-muted">No ledger rows are merged or edited. Credit-card settlements are not new spending. Equal-value duplicates or multiple source candidates stay ambiguous. Automatic balance adjustments remain locked.</p>
+                </div>
+                <div id="transfer-proof-unavailable" class="transfer-proof-warning glass-panel">Loading source data…</div>
+                <div id="transfer-proof-content" class="hidden">
+                  <div class="transfer-proof-kpis">
+                    <article class="transfer-proof-kpi glass-panel"><span>Transfers &amp; unknowns to review</span><strong id="transfer-proof-review">—</strong><small>Purpose verification needed</small></article>
+                    <article class="transfer-proof-kpi glass-panel"><span>Unique source debit candidates</span><strong id="transfer-proof-source">—</strong><small>Match ≠ confirmed purpose</small></article>
+                    <article class="transfer-proof-kpi glass-panel"><span>Ambiguous matches</span><strong id="transfer-proof-ambiguous">—</strong><small>Not automatically linked</small></article>
+                    <article class="transfer-proof-kpi glass-panel"><span>No native source match</span><strong id="transfer-proof-missing">—</strong><small>Includes Japanese account transfers</small></article>
+                    <article class="transfer-proof-kpi glass-panel"><span>Unique bank debit/credit pairs</span><strong id="transfer-proof-paired">—</strong><small>Bank evidence only</small></article>
+                    <article class="transfer-proof-kpi glass-panel"><span>Legal account ownership</span><strong id="transfer-proof-ownership">—</strong><small>Requires your confirmation</small></article>
+                  </div>
+                  <div id="transfer-proof-payment" class="transfer-proof-warning glass-panel">Checking Tokopedia Card vs BNI…</div>
+                  <div class="transfer-proof-columns">
+                    <section class="transfer-proof-panel glass-panel">
+                      <h3>Ledger transfer review</h3>
+                      <p class="transfer-proof-muted">Click a row to inspect the original record. Even matched debit rows require a purpose decision.</p>
+                      <div class="transfer-proof-controls">
+                        <button type="button" class="active" data-transfer-filter="all">All</button>
+                        <button type="button" data-transfer-filter="matched">Source candidate</button>
+                        <button type="button" data-transfer-filter="review">Missing / ambiguous</button>
+                      </div>
+                      <p id="transfer-proof-shown" class="transfer-proof-muted">—</p>
+                      <div id="transfer-proof-rows"></div>
+                    </section>
+                    <section class="transfer-proof-panel glass-panel">
+                      <h3>Bank statement debit → credit pairs</h3>
+                      <p class="transfer-proof-muted">Only mutually unique, same-day, same-IDR-amount opposite-sign entries in different statement accounts appear here. These are candidate bank counterparts, not confirmation of account ownership or transaction purpose.</p>
+                      <div id="transfer-proof-pairs-list"></div>
+                    </section>
+                  </div>
+                  <section class="transfer-proof-panel glass-panel">
+                    <h3>Evidence still required</h3>
+                    <p class="transfer-proof-muted">Verify which listed accounts are yours; clarify payments made to other people; obtain Japan Post and Hokuriku bank transaction records to trace transfers; and explain the Tokopedia Card debit discrepancy using its payment receipt. Do not reactivate automatic balance adjustments before the source evidence reconciles.</p>
+                  </section>
+                </div>
+              </section>
             </div>
 
             <div id="view-flow-audit" class="dashboard-view hidden">
