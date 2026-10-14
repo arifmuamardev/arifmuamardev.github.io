@@ -518,6 +518,27 @@ function updateHomeCommandCenter() {
         });
     }
 
+    const budgetSummary = window.MonthlyBudget?.getSummary?.(monthKey);
+    if (budgetSummary?.targetCount) {
+        if (budgetSummary.over.length) {
+            const top = budgetSummary.over[0];
+            alerts.push({
+                type: "warning",
+                icon: "fa-bullseye",
+                title: `${top.category} is over budget`,
+                text: `Spent ¥${formatCurrency(top.spent)} against a ¥${formatCurrency(top.target)} target.`
+            });
+        } else if (budgetSummary.near.length) {
+            const top = budgetSummary.near[0];
+            alerts.push({
+                type: "warning",
+                icon: "fa-bullseye",
+                title: `${top.category} is nearing its budget`,
+                text: `${Math.round(top.ratio * 100)}% of the monthly target has been used.`
+            });
+        }
+    }
+
     const latestTxn = [...cashData].reverse().find(item => item.tanggal && !isFutureDatedTransaction(item));
     if (latestTxn?.tanggal) {
         const latestDate = new Date(`${latestTxn.tanggal}T00:00:00+09:00`);
