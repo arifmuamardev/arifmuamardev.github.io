@@ -17,8 +17,8 @@
     <!-- Public Neon endpoints live in config.js; database credentials never ship to the browser. -->
     <script src="config.js?v=4.0.1"></script>
     <script type="module" src="cloud.js?v=4.0.1"></script>
-    <link rel="stylesheet" href="styles.css?v=4.1.0">
-    <script src="app.js?v=4.1.0" defer></script>
+    <link rel="stylesheet" href="styles.css?v=4.2.0">
+    <script src="app.js?v=4.2.0" defer></script>
 </head>
 <body class="dark-theme">
     <div id="auth-gate" class="auth-gate" aria-live="polite">
@@ -380,69 +380,115 @@
 
             <!-- View 2: Transactions List -->
             <div id="view-transactions" class="dashboard-view hidden">
-                <!-- Controls: filters -->
-                <section class="page-controls-section" style="margin-bottom: 1.5rem;">
-                    <div class="glass-panel" style="padding: 1.25rem; display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap;">
-                        <div style="display: flex; align-items: center; gap: 0.75rem;">
-                            <div class="logo-icon" style="background: rgba(59, 130, 246, 0.15); color: #3b82f6; width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem;"><i class="fa-solid fa-list-check"></i></div>
-                            <div>
-                                <h3 style="font-family: 'Outfit', sans-serif; font-size: 1.1rem; font-weight: 600; color: var(--text-primary);">Transactions List</h3>
-                                <p style="font-size: 0.8rem; color: var(--text-muted);">Detailed ledger records</p>
-                            </div>
+                <section class="transaction-workspace" aria-label="Transactions workspace">
+                    <div class="transaction-toolbar glass-panel">
+                        <div class="transaction-toolbar-heading">
+                            <span class="home-section-kicker">Ledger</span>
+                            <h2>Transactions</h2>
+                            <p>Find a transaction fast, narrow the ledger, then open a row for full details.</p>
                         </div>
-                        <div style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; flex-grow: 1; justify-content: flex-end;">
-                            <div class="filter-group" style="margin: 0; width: 180px;">
-                                <label style="font-size: 0.75rem; margin-bottom: 0.25rem; color: var(--text-secondary);"><i class="fa-regular fa-calendar"></i> Month Selection</label>
-                                <select class="sync-filter-month" style="width: 100%;">
-                                    <option value="all">All Months</option>
-                                </select>
-                            </div>
-                            <div class="filter-group" style="margin: 0; width: 180px;">
-                                <label style="font-size: 0.75rem; margin-bottom: 0.25rem; color: var(--text-secondary);"><i class="fa-solid fa-tags"></i> Category</label>
-                                <select class="sync-filter-category" style="width: 100%;">
-                                    <option value="all">All Categories</option>
-                                </select>
-                            </div>
-                            <div class="filter-group" style="margin: 0; width: 220px;">
-                                <label style="font-size: 0.75rem; margin-bottom: 0.25rem; color: var(--text-secondary);"><i class="fa-solid fa-magnifying-glass"></i> Search</label>
-                                <input type="text" class="sync-filter-search" placeholder="Search item or store..." style="width: 100%;">
-                            </div>
-                            <button class="sync-filter-reset reset-btn" style="height: 38px; margin-top: 1.25rem;">
-                                <i class="fa-solid fa-arrow-rotate-left"></i> Reset
-                            </button>
+                        <div class="transaction-search-wrap">
+                            <i class="fa-solid fa-magnifying-glass"></i>
+                            <input id="transaction-primary-search" type="search" class="sync-filter-search"
+                                placeholder="Search item, store, category, or note…" autocomplete="off">
+                            <kbd>⌘K</kbd>
                         </div>
                     </div>
-                </section>
 
-                <!-- Bottom Section: Transactions Ledger -->
-                <section class="ledger-section" aria-label="Transaction Details">
-                    <div class="table-card glass-panel">
-                        <div class="table-header">
-                            <div class="table-header-title">
-                                <h2><i class="fa-solid fa-list-check"></i> Cash Ledger Transactions</h2>
-                                <span id="transaction-count">Showing 0 transactions</span>
+                    <div class="transaction-filter-bar glass-panel" aria-label="Transaction filters">
+                        <div class="transaction-filter-selects">
+                            <label class="transaction-filter-field">
+                                <span>Month</span>
+                                <select class="sync-filter-month">
+                                    <option value="all">All months</option>
+                                </select>
+                            </label>
+                            <label class="transaction-filter-field">
+                                <span>Category</span>
+                                <select class="sync-filter-category">
+                                    <option value="all">All categories</option>
+                                </select>
+                            </label>
+                        </div>
+
+                        <div class="transaction-segment-group">
+                            <span class="transaction-segment-label">Payment</span>
+                            <div class="transaction-segmented" role="group" aria-label="Payment type">
+                                <button type="button" class="transaction-filter-chip active" data-transaction-payment="all">All</button>
+                                <button type="button" class="transaction-filter-chip" data-transaction-payment="cash">Cash</button>
+                                <button type="button" class="transaction-filter-chip" data-transaction-payment="cashless">Digital</button>
                             </div>
                         </div>
-                        <div class="table-scroll-container">
-                            <table id="ledger-table">
-                                <thead>
-                                    <tr>
-                                        <th class="sortable" data-sort="id">ID <i class="fa-solid fa-sort sort-icon"></i></th>
-                                        <th class="sortable active" data-sort="tanggal">Date <i class="fa-solid fa-sort-down sort-icon"></i></th>
-                                        <th class="sortable" data-sort="item_normalized">Item Description <i class="fa-solid fa-sort sort-icon"></i></th>
-                                        <th class="sortable" data-sort="kategori_normalized">Category <i class="fa-solid fa-sort sort-icon"></i></th>
-                                        <th class="sortable" data-sort="tempat">Store/Location <i class="fa-solid fa-sort sort-icon"></i></th>
-                                        <th class="sortable amount-col" data-sort="pemasukan">Income (¥) <i class="fa-solid fa-sort sort-icon"></i></th>
-                                        <th class="sortable amount-col" data-sort="pengeluaran">Expense (¥) <i class="fa-solid fa-sort sort-icon"></i></th>
-                                        <th class="sortable amount-col" data-sort="saldo">Balance (¥) <i class="fa-solid fa-sort sort-icon"></i></th>
-                                    </tr>
-                                </thead>
-                                <tbody id="ledger-table-body">
-                                    <!-- Table rows will be dynamically populated -->
-                                </tbody>
-                            </table>
+
+                        <div class="transaction-segment-group">
+                            <span class="transaction-segment-label">Flow</span>
+                            <div class="transaction-segmented" role="group" aria-label="Transaction flow">
+                                <button type="button" class="transaction-filter-chip active" data-transaction-flow="all">All</button>
+                                <button type="button" class="transaction-filter-chip" data-transaction-flow="expense">Expense</button>
+                                <button type="button" class="transaction-filter-chip" data-transaction-flow="income">Income</button>
+                            </div>
                         </div>
+
+                        <button type="button" class="sync-filter-reset transaction-reset-btn">
+                            <i class="fa-solid fa-arrow-rotate-left"></i>
+                            Reset
+                        </button>
                     </div>
+
+                    <section class="transaction-summary-grid" aria-label="Filtered transaction summary">
+                        <article class="transaction-summary-card glass-panel">
+                            <span>Results</span>
+                            <strong id="transaction-summary-count">0</strong>
+                            <small>matching transactions</small>
+                        </article>
+                        <article class="transaction-summary-card glass-panel">
+                            <span>Income</span>
+                            <strong class="income" id="transaction-summary-income">¥0</strong>
+                            <small>filtered total</small>
+                        </article>
+                        <article class="transaction-summary-card glass-panel">
+                            <span>Expenses</span>
+                            <strong class="expense" id="transaction-summary-expense">¥0</strong>
+                            <small>filtered total</small>
+                        </article>
+                        <article class="transaction-summary-card glass-panel">
+                            <span>Net</span>
+                            <strong id="transaction-summary-net">¥0</strong>
+                            <small>income minus expenses</small>
+                        </article>
+                    </section>
+
+                    <section class="ledger-section transaction-ledger" aria-label="Transaction details">
+                        <div class="table-card glass-panel">
+                            <div class="table-header transaction-table-header">
+                                <div class="table-header-title">
+                                    <h2><i class="fa-solid fa-list-check"></i> Ledger</h2>
+                                    <span id="transaction-count">Showing 0 transactions</span>
+                                </div>
+                                <div class="transaction-table-hint">
+                                    <i class="fa-regular fa-hand-pointer"></i>
+                                    Select a row for details
+                                </div>
+                            </div>
+                            <div class="table-scroll-container">
+                                <table id="ledger-table" class="transaction-table">
+                                    <thead>
+                                        <tr>
+                                            <th class="sortable transaction-col-id" data-sort="id">ID <i class="fa-solid fa-sort sort-icon"></i></th>
+                                            <th class="sortable active" data-sort="tanggal">Date <i class="fa-solid fa-sort-down sort-icon"></i></th>
+                                            <th class="sortable" data-sort="item_normalized">Description <i class="fa-solid fa-sort sort-icon"></i></th>
+                                            <th class="sortable" data-sort="kategori_normalized">Category <i class="fa-solid fa-sort sort-icon"></i></th>
+                                            <th class="sortable transaction-col-store" data-sort="tempat">Store <i class="fa-solid fa-sort sort-icon"></i></th>
+                                            <th class="sortable amount-col" data-sort="pemasukan">Income <i class="fa-solid fa-sort sort-icon"></i></th>
+                                            <th class="sortable amount-col" data-sort="pengeluaran">Expense <i class="fa-solid fa-sort sort-icon"></i></th>
+                                            <th class="sortable amount-col transaction-col-balance" data-sort="saldo">Balance <i class="fa-solid fa-sort sort-icon"></i></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="ledger-table-body"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </section>
                 </section>
             </div>
 
@@ -2985,6 +3031,42 @@
         </div>
     </div>
 
+    <div id="transaction-drawer-scrim" class="transaction-drawer-scrim hidden"></div>
+    <aside id="transaction-drawer" class="transaction-drawer" aria-hidden="true" aria-labelledby="transaction-drawer-title">
+        <div class="transaction-drawer-header">
+            <div>
+                <span class="home-section-kicker">Transaction detail</span>
+                <h2 id="transaction-drawer-title">Transaction</h2>
+                <p id="transaction-drawer-subtitle">Read-only ledger record</p>
+            </div>
+            <button type="button" id="transaction-drawer-close" class="transaction-drawer-close" aria-label="Close transaction details">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+        <div class="transaction-drawer-body">
+            <section class="transaction-drawer-amount">
+                <span id="transaction-drawer-flow">Transaction</span>
+                <strong id="transaction-drawer-amount">¥0</strong>
+                <small id="transaction-drawer-date">—</small>
+            </section>
+            <dl class="transaction-detail-list">
+                <div><dt>Category</dt><dd id="transaction-detail-category">—</dd></div>
+                <div><dt>Payment</dt><dd id="transaction-detail-payment">—</dd></div>
+                <div><dt>Store / location</dt><dd id="transaction-detail-store">—</dd></div>
+                <div><dt>Running balance</dt><dd id="transaction-detail-balance">—</dd></div>
+                <div><dt>Original item</dt><dd id="transaction-detail-original">—</dd></div>
+                <div><dt>Note</dt><dd id="transaction-detail-note">—</dd></div>
+                <div><dt>Record ID</dt><dd id="transaction-detail-id">—</dd></div>
+            </dl>
+            <div class="transaction-drawer-readonly">
+                <i class="fa-solid fa-lock"></i>
+                <div>
+                    <strong>Read-only for now</strong>
+                    <p>Editing will be enabled in a separate write-safe batch after validation.</p>
+                </div>
+            </div>
+        </div>
+    </aside>
     <div id="sidebar-scrim" class="sidebar-scrim hidden"></div>
     <div id="command-palette" class="command-palette hidden" role="dialog" aria-modal="true" aria-label="Quick navigation">
         <div class="command-card glass-panel">
