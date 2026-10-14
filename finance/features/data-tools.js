@@ -7,7 +7,6 @@
     bni: [],
     muamalat: [],
     gopay: [],
-    audit: [],
     settings: {}
   };
 
@@ -195,7 +194,7 @@
     setText("data-duplicate-count", formatNumber(a.duplicateGroups.length));
     setText("data-missing-count", formatNumber(a.missingEssentials.length));
     setText("data-others-count", formatNumber(a.othersRows.length));
-    setText("data-audit-count", formatNumber((payload.audit || []).length));
+    refreshAuditCount();
     setText("data-range", a.earliestPosted && a.latestPosted ? `${a.earliestPosted} → ${a.latestPosted}` : "—");
     setText("data-latest-posted", a.latestPosted || "—");
 
@@ -233,9 +232,27 @@
     setText("data-last-backup", stamped);
   }
 
-  function exportJson() {
-    const exportedAt = new Date().toISOString();
-    const backup = {
+  async function refreshAuditCount() {
+    try {
+      const count = await window.BudgetCloud.getAuditCount();
+      setText("data-audit-count", formatNumber(count));
+    } catch (error) {
+      console.error("Audit count failed:", error);
+      setText("data-audit-count", "—");
+    }
+  }
+
+  async function exportJson() {
+    const button = document.getElementById("data-export-json");
+    const old = button?.innerHTML;
+    try {
+      if (button) {
+        button.disabled = true;
+        button.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Building backup…';
+      }
+      const audit = await window.BudgetCloud.getAllAuditHistory();
+      const exportedAt = new Date().toISOString();
+      const backup = {
       backup_format: "personal-finance-neon",
       backup_version: 1,
       exported_at: exportedAt,
@@ -247,15 +264,27 @@
         bni_transactions: payload.bni || [],
         muamalat_transactions: payload.muamalat || [],
         gopay_transactions: payload.gopay || [],
-        cash_transaction_audit: payload.audit || []
+        cash_transaction_audit: audit || []
       },
       app_settings: payload.settings || {}
-    };
-    downloadBlob(
-      `personal-finance-backup-${todayTokyo()}.json`,
-      JSON.stringify(backup, null, 2),
-      "application/json;charset=utf-8"
-    );
+      };
+      downloadBlob(
+        `personal-finance-backup-${todayTokyo()}.json`,
+        JSON.stringify(backup, null, 2),
+        "application/json;charset=utf-8"
+      );
+      setText("data-audit-count", formatNumber((audit || []).length));
+    } catch (error) {
+      console.error("Full backup failed:", error);
+      window.dispatchEvent(new CustomEvent("budget:data-tools-error", {
+        detail: { message: error?.message || "Full backup could not be created." }
+      }));
+    } finally {
+      if (button) {
+        button.disabled = false;
+        button.innerHTML = old || '<i class="fa-solid fa-file-code"></i> Export full backup';
+      }
+    }
   }
 
   function exportCashCsv() {
@@ -281,7 +310,6 @@
       bni: nextPayload?.bni || [],
       muamalat: nextPayload?.muamalat || [],
       gopay: nextPayload?.gopay || [],
-      audit: nextPayload?.audit || [],
       settings: nextPayload?.settings || {}
     };
     render();
