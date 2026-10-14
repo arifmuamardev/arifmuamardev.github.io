@@ -1558,6 +1558,7 @@ function initNavigation() {
             history.replaceState(null, "", `#${targetViewId}`);
             document.body.classList.remove("sidebar-open");
             document.getElementById("sidebar-scrim")?.classList.add("hidden");
+            closeTransactionDrawer();
 
             navButtons.forEach(b => b.classList.remove("active"));
             btn.classList.add("active");
