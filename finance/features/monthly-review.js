@@ -386,6 +386,20 @@
       });
     }
 
+    const othersSpend = summary.rows.reduce((sum, item) => {
+      if (categoryOf(item).toLowerCase() !== "others") return sum;
+      return sum + amount(item.pengeluaran);
+    }, 0);
+    const othersShare = summary.netExpenses > 0 ? Math.max(0, othersSpend) / summary.netExpenses * 100 : 0;
+    if (othersShare >= 25) {
+      signals.push({
+        tone: "warning",
+        icon: "fa-tags",
+        title: "Category analysis is limited by Others",
+        text: `“Others” represents ${othersShare.toFixed(1)}% of monthly spending. Category cleanup would make this review more informative.`
+      });
+    }
+
     const largest = summary.rows
       .map(item => Math.max(0, amount(item.pengeluaran)))
       .sort((a, b) => b - a)[0] || 0;
