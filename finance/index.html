@@ -17,8 +17,8 @@
     <!-- Public Neon endpoints live in config.js; database credentials never ship to the browser. -->
     <script src="config.js?v=4.0.1"></script>
     <script type="module" src="cloud.js?v=4.0.1"></script>
-    <link rel="stylesheet" href="styles.css?v=4.0.0">
-    <script src="app.js?v=4.0.0" defer></script>
+    <link rel="stylesheet" href="styles.css?v=4.1.0">
+    <script src="app.js?v=4.1.0" defer></script>
 </head>
 <body class="dark-theme">
     <div id="auth-gate" class="auth-gate" aria-live="polite">
@@ -70,38 +70,52 @@
                 <div class="sidebar-category">
                     <div class="sidebar-category-title">Overview</div>
                     <button class="nav-btn active" data-target="view-balance"><i class="fa-solid fa-house"></i><span>Home</span></button>
-                    <button class="nav-btn" data-target="view-analytics"><i class="fa-solid fa-chart-pie"></i><span>Analytics</span></button>
                     <button class="nav-btn" data-target="view-transactions"><i class="fa-solid fa-list-check"></i><span>Transactions</span></button>
-                    <button class="nav-btn" data-target="view-reconciliation"><i class="fa-solid fa-scale-balanced"></i><span>Reconciliation</span></button>
+                    <button class="nav-btn" data-target="view-analytics"><i class="fa-solid fa-chart-pie"></i><span>Analytics</span></button>
                 </div>
+
                 <div class="sidebar-category">
-                    <div class="sidebar-category-title">Accounts</div>
-                    <button class="nav-btn" data-target="view-bni-account"><i class="fa-solid fa-building-columns"></i><span>BNI</span></button>
-                    <button class="nav-btn" data-target="view-muamalat-account"><i class="fa-solid fa-building-columns"></i><span>Muamalat</span></button>
-                    <button class="nav-btn" data-target="view-gopay-account"><i class="fa-solid fa-wallet"></i><span>GoPay</span></button>
-                    <button class="nav-btn" data-target="view-withdrawals"><i class="fa-solid fa-money-bill-transfer"></i><span>ATM Activity</span></button>
-                </div>
-                <div class="sidebar-category">
-                    <div class="sidebar-category-title">Cards & Commitments</div>
-                    <button class="nav-btn" data-target="view-cc-ku"><i class="fa-solid fa-credit-card"></i><span>Hokuriku VISA</span></button>
-                    <button class="nav-btn" data-target="view-toped-card"><i class="fa-solid fa-credit-card"></i><span>Tokopedia Card</span></button>
-                    <button class="nav-btn" data-target="view-spaylater"><i class="fa-solid fa-calendar-days"></i><span>SPayLater</span></button>
-                    <button class="nav-btn" data-target="view-online-shopping"><i class="fa-solid fa-bag-shopping"></i><span>Online Shopping</span></button>
-                </div>
-                <div class="sidebar-category">
-                    <div class="sidebar-category-title">Living Costs</div>
-                    <button class="nav-btn" data-target="view-utilities-overview"><i class="fa-solid fa-gauge-high"></i><span>Utilities</span></button>
-                    <button class="nav-btn" data-target="view-rent"><i class="fa-solid fa-house-chimney"></i><span>Rent</span></button>
-                    <button class="nav-btn" data-target="view-gas"><i class="fa-solid fa-fire"></i><span>Gas</span></button>
-                    <button class="nav-btn" data-target="view-electricity"><i class="fa-solid fa-bolt"></i><span>Electricity</span></button>
-                    <button class="nav-btn" data-target="view-water"><i class="fa-solid fa-droplet"></i><span>Water</span></button>
-                    <button class="nav-btn" data-target="view-mobile"><i class="fa-solid fa-mobile-screen-button"></i><span>Mobile</span></button>
-                </div>
-                <div class="sidebar-category">
-                    <div class="sidebar-category-title">Insights</div>
+                    <div class="sidebar-category-title">Cash Flow</div>
                     <button class="nav-btn" data-target="view-income"><i class="fa-solid fa-arrow-trend-up"></i><span>Income</span></button>
                     <button class="nav-btn" data-target="view-expense"><i class="fa-solid fa-arrow-trend-down"></i><span>Expenses</span></button>
-                    <button class="nav-btn" data-target="view-ai-insights"><i class="fa-solid fa-wand-magic-sparkles"></i><span>Financial Advisor</span></button>
+                    <button class="nav-btn" data-target="view-reconciliation"><i class="fa-solid fa-scale-balanced"></i><span>Reconciliation</span></button>
+                </div>
+
+                <details class="sidebar-disclosure">
+                    <summary><span><i class="fa-solid fa-building-columns"></i> Accounts</span><i class="fa-solid fa-chevron-down disclosure-chevron"></i></summary>
+                    <div class="sidebar-disclosure-content">
+                        <button class="nav-btn" data-target="view-bni-account"><i class="fa-solid fa-building-columns"></i><span>BNI</span></button>
+                        <button class="nav-btn" data-target="view-muamalat-account"><i class="fa-solid fa-building-columns"></i><span>Muamalat</span></button>
+                        <button class="nav-btn" data-target="view-gopay-account"><i class="fa-solid fa-wallet"></i><span>GoPay</span></button>
+                        <button class="nav-btn" data-target="view-withdrawals"><i class="fa-solid fa-money-bill-transfer"></i><span>ATM Activity</span></button>
+                    </div>
+                </details>
+
+                <details class="sidebar-disclosure">
+                    <summary><span><i class="fa-solid fa-credit-card"></i> Commitments</span><i class="fa-solid fa-chevron-down disclosure-chevron"></i></summary>
+                    <div class="sidebar-disclosure-content">
+                        <button class="nav-btn" data-target="view-cc-ku"><i class="fa-solid fa-credit-card"></i><span>Hokuriku VISA</span></button>
+                        <button class="nav-btn" data-target="view-toped-card"><i class="fa-solid fa-credit-card"></i><span>Tokopedia Card</span></button>
+                        <button class="nav-btn" data-target="view-spaylater"><i class="fa-solid fa-calendar-days"></i><span>SPayLater</span></button>
+                        <button class="nav-btn" data-target="view-online-shopping"><i class="fa-solid fa-bag-shopping"></i><span>Online Shopping</span></button>
+                    </div>
+                </details>
+
+                <details class="sidebar-disclosure">
+                    <summary><span><i class="fa-solid fa-house-chimney"></i> Living Costs</span><i class="fa-solid fa-chevron-down disclosure-chevron"></i></summary>
+                    <div class="sidebar-disclosure-content">
+                        <button class="nav-btn" data-target="view-utilities-overview"><i class="fa-solid fa-gauge-high"></i><span>Utilities</span></button>
+                        <button class="nav-btn" data-target="view-rent"><i class="fa-solid fa-house-chimney"></i><span>Rent</span></button>
+                        <button class="nav-btn" data-target="view-gas"><i class="fa-solid fa-fire"></i><span>Gas</span></button>
+                        <button class="nav-btn" data-target="view-electricity"><i class="fa-solid fa-bolt"></i><span>Electricity</span></button>
+                        <button class="nav-btn" data-target="view-water"><i class="fa-solid fa-droplet"></i><span>Water</span></button>
+                        <button class="nav-btn" data-target="view-mobile"><i class="fa-solid fa-mobile-screen-button"></i><span>Mobile</span></button>
+                    </div>
+                </details>
+
+                <div class="sidebar-category">
+                    <div class="sidebar-category-title">Tools</div>
+                    <button class="nav-btn" data-target="view-ai-insights"><i class="fa-solid fa-lightbulb"></i><span>Insights</span></button>
                 </div>
             </nav>
             <div class="sidebar-account">
@@ -138,6 +152,72 @@
 
             <!-- View 0: Balance Overview (Dedicated Balance Page) -->
             <div id="view-balance" class="dashboard-view active">
+                <section class="home-command-center" aria-label="Current financial snapshot">
+                    <div class="home-hero glass-panel">
+                        <div class="home-hero-copy">
+                            <span class="home-eyebrow" id="home-period-label">This month</span>
+                            <h1 id="home-greeting">Your money at a glance</h1>
+                            <p>Start here for the numbers and signals that matter now. Historical detail stays available below.</p>
+                        </div>
+                        <div class="home-balance-block">
+                            <span class="home-balance-label">Recorded balance</span>
+                            <div class="home-balance-value"><span>¥</span><strong id="home-current-balance">0</strong></div>
+                            <span class="home-balance-meta" id="home-balance-meta">Latest recorded balance</span>
+                        </div>
+                    </div>
+
+                    <div class="home-month-stats" aria-label="This month summary">
+                        <article class="home-stat glass-panel">
+                            <span class="home-stat-label">Income</span>
+                            <strong class="home-stat-value income" id="home-month-income">¥0</strong>
+                            <small id="home-income-note">This month</small>
+                        </article>
+                        <article class="home-stat glass-panel">
+                            <span class="home-stat-label">Spending</span>
+                            <strong class="home-stat-value expense" id="home-month-spending">¥0</strong>
+                            <small id="home-spending-note">This month</small>
+                        </article>
+                        <article class="home-stat glass-panel">
+                            <span class="home-stat-label">Net</span>
+                            <strong class="home-stat-value" id="home-month-net">¥0</strong>
+                            <small>Income minus spending</small>
+                        </article>
+                        <article class="home-stat glass-panel">
+                            <span class="home-stat-label">Savings rate</span>
+                            <strong class="home-stat-value" id="home-month-savings">0%</strong>
+                            <small>Current month</small>
+                        </article>
+                    </div>
+
+                    <div class="home-focus-grid">
+                        <article class="home-focus-card glass-panel">
+                            <div class="home-section-heading">
+                                <div>
+                                    <span class="home-section-kicker">Attention</span>
+                                    <h2>What needs a look</h2>
+                                </div>
+                                <i class="fa-solid fa-sparkles"></i>
+                            </div>
+                            <div id="home-alerts" class="home-alert-list" aria-live="polite">
+                                <div class="home-empty-state">Checking this month's signals…</div>
+                            </div>
+                        </article>
+
+                        <article class="home-focus-card glass-panel">
+                            <div class="home-section-heading">
+                                <div>
+                                    <span class="home-section-kicker">Latest</span>
+                                    <h2>Recent activity</h2>
+                                </div>
+                                <button class="home-text-action" data-go="view-transactions">View all <i class="fa-solid fa-chevron-right"></i></button>
+                            </div>
+                            <div id="home-recent-list" class="home-recent-list">
+                                <div class="home-empty-state">Loading recent transactions…</div>
+                            </div>
+                        </article>
+                    </div>
+                </section>
+
                 <!-- Controls: filters -->
                 <section class="page-controls-section" style="margin-bottom: 1.5rem;">
                     <div class="glass-panel" style="padding: 1.25rem; display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap;">
@@ -167,7 +247,7 @@
                 </section>
 
                 <!-- KPI Scorecards Grid -->
-                <section class="kpi-grid" aria-label="Key Performance Indicators" style="margin-bottom: 1.5rem;">
+                <section class="kpi-grid home-legacy-kpis" aria-label="Legacy key performance indicators" style="margin-bottom: 1.5rem;">
                     <!-- Balance Card -->
                     <div class="kpi-card glass-panel card-balance">
                         <div class="kpi-card-inner">
