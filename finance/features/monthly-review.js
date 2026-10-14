@@ -11,6 +11,7 @@
   let cash = [];
   let budgets = [];
   let selectedMonth = "";
+  let monthTouched = false;
 
   function todayTokyo() {
     const parts = Object.fromEntries(
@@ -190,20 +191,22 @@
 
     const totals = new Map();
     summary.rows.forEach(item => {
-      const expense = Math.max(0, amount(item.pengeluaran));
-      const refund = Math.abs(Math.min(0, amount(item.pengeluaran)));
-      const netExpense = Math.max(0, expense - refund);
-      if (netExpense <= 0) return;
+      const rawExpense = amount(item.pengeluaran);
+      if (rawExpense === 0) return;
       const category = categoryOf(item);
-      totals.set(category, (totals.get(category) || 0) + netExpense);
+      totals.set(category, (totals.get(category) || 0) + rawExpense);
     });
 
     const rows = [...totals.entries()]
-      .map(([category, value]) => ({
+      .map(([category, rawValue]) => {
+        const value = Math.max(0, rawValue);
+        return {
         category,
         value,
         share: summary.netExpenses > 0 ? value / summary.netExpenses : 0
-      }))
+        };
+      })
+      .filter(row => row.value > 0)
       .sort((a, b) => b.value - a.value)
       .slice(0, 8);
 
@@ -307,15 +310,15 @@
 
     const actualMap = new Map();
     summary.rows.forEach(item => {
-      const expense = Math.max(0, amount(item.pengeluaran));
-      if (expense <= 0) return;
+      const expense = amount(item.pengeluaran);
+      if (expense === 0) return;
       const category = categoryOf(item);
       actualMap.set(category, (actualMap.get(category) || 0) + expense);
     });
 
     const rows = targets.map(target => {
       const planned = amount(target.amount);
-      const actual = actualMap.get(target.category) || 0;
+      const actual = Math.max(0, actualMap.get(target.category) || 0);
       return {
         category: target.category,
         planned,
@@ -449,14 +452,13 @@
   function setData(next = {}) {
     cash = Array.isArray(next.cash) ? next.cash : [];
     budgets = Array.isArray(next.budgets) ? next.budgets : [];
-    if (!selectedMonth) selectedMonth = defaultMonth();
+    if (!monthTouched) selectedMonth = defaultMonth();
     render();
   }
 
   function init() {
-    selectedMonth = defaultMonth();
-
     document.getElementById("review-month")?.addEventListener("change", event => {
+      monthTouched = true;
       selectedMonth = event.target.value || defaultMonth();
       render();
     });
