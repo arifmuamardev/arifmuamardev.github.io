@@ -2264,7 +2264,20 @@ document.addEventListener("DOMContentLoaded", bootstrapApplication);
 // --- CC KU Tracker Specific Logic ---
 let ccKuGrouped = {};
 
-function getCCKuPaymentDetails(dateStr, kategoriNormalized) {
+function getCCKuPaymentDetails(dateStr, kategoriNormalized, note = "") {
+    // Imported bank document lines use the actual due date, not a guessed
+    // billing cutoff. Delayed utility charges can fall outside normal ranges.
+    const officialPayDate = window.FinanceVisaReview?.statementDueForLedgerEntry(note);
+    if (officialPayDate) {
+        const due = new Date(officialPayDate + "T00:00:00Z");
+        const year = due.getUTCFullYear();
+        const month = due.getUTCMonth();
+        return {
+            billingStart: new Date(Date.UTC(year, month - 2, 16)).toISOString().slice(0, 10),
+            billingEnd: new Date(Date.UTC(year, month - 1, 15)).toISOString().slice(0, 10),
+            payDate: officialPayDate
+        };
+    }
     const date = new Date(dateStr);
     let year = date.getFullYear();
     let month = date.getMonth() + 1; // 1-indexed
@@ -2311,7 +2324,7 @@ function initCCKuTracker() {
     
     ccKuGrouped = {};
     ccKuTrans.forEach(item => {
-        const { billingStart, billingEnd, payDate } = getCCKuPaymentDetails(item.tanggal, item.kategori_normalized);
+        const { billingStart, billingEnd, payDate } = getCCKuPaymentDetails(item.tanggal, item.kategori_normalized, item.note);
         if (!ccKuGrouped[payDate]) {
             ccKuGrouped[payDate] = {
                 payDate,
@@ -2431,7 +2444,9 @@ function updateCCKuView(selectedPayDate) {
                 const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
                 return `${monthNames[parseInt(parts[1]) - 1]} ${parts[2]}`;
             };
-            rangeLabel = `${formatMonthDay(groupInfo.billingStart)} - ${formatMonthDay(groupInfo.billingEnd)}`;
+            rangeLabel = groupInfo.transactions.some(item => String(item.note || "").includes("VISA-PDF-"))
+                ? "Bank statement (includes delayed utility charges)"
+                : `${formatMonthDay(groupInfo.billingStart)} - ${formatMonthDay(groupInfo.billingEnd)}`;
             
             if (selectedPayDate > todayStr) {
                 statusText = "Outstanding";

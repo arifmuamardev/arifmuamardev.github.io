@@ -123,3 +123,9 @@ test("two equal-value PDF imports respect source line identity",()=>{
  assert.equal(m.lines[0].ledgerId,201);
  assert.equal(m.lines[1].ledgerId,200);
 });
+
+test("official statement reference determines the due date, not transaction date",()=>{
+  assert.equal(require("../features/visa-review.js").statementDueForLedgerEntry("CC KU | VISA-PDF-20261110-L33"),"2026-11-10");
+  assert.equal(require("../features/visa-review.js").statementDueForLedgerEntry("CC KU"),null);
+  assert.equal(require("../features/visa-review.js").statementDueForLedgerEntry("VISA-PDF-20261340-L01"),null);
+});

@@ -12,6 +12,15 @@
   const note = row => String(row?.note || "").toUpperCase();
   const moneyEq = (a, b) => Math.abs(num(a) - num(b)) <= 0.01;
 
+  function statementDueForLedgerEntry(note) {
+    const match = String(note || "").match(/VISA-PDF-([0-9]{4})([0-9]{2})([0-9]{2})-L[0-9]{2}/i);
+    if (!match) return null;
+    const due = match[1] + "-" + match[2] + "-" + match[3];
+    const parsed = new Date(due + "T00:00:00Z");
+    return Number.isFinite(parsed.getTime()) &&
+      parsed.toISOString().slice(0, 10) === due ? due : null;
+  }
+
   function matchLines(statement, cash, taken) {
     const lines = Array.isArray(statement?.payload?.lines) ? statement.payload.lines : [];
     const ledger = Array.isArray(cash) ? cash : [];
@@ -253,6 +262,6 @@
     });
     render();
   }
-  if (typeof window !== "undefined") window.FinanceVisaReview = { init, setData, render };
-  if (typeof module !== "undefined" && module.exports) module.exports = { snapshotForTest: calculate };
+  if (typeof window !== "undefined") window.FinanceVisaReview = { init, setData, render, statementDueForLedgerEntry };
+  if (typeof module !== "undefined" && module.exports) module.exports = { snapshotForTest: calculate, statementDueForLedgerEntry };
 })();
