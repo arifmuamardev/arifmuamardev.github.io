@@ -153,6 +153,10 @@
         other: valid.filter(x => !["JPY", "IDR"].includes(currencyOf(x))).length
       },
       lastPosted, daysSince,
+      categoryReview: rows.filter(row => (row.kategori_normalized || row.kategori) === "Others")
+        .map(row=>({id:Number(row.id), date:dateOf(row), label:String(row.item||row.item_normalized||"Unknown item"),
+          currency:currencyOf(row), amount:value(row.pengeluaran)}))
+        .sort((a,b)=>b.date.localeCompare(a.date)||b.id-a.id),
       duplicate: findDuplicates(valid),
       balance: balanceCheck(posted),
       fx: fxCheck(valid)
@@ -212,6 +216,32 @@
     put("integrity-total", m.total.toLocaleString("ja-JP"));
     put("integrity-split", m.byCurrency.JPY + " JPY · " + m.byCurrency.IDR +
       " IDR origin" + (m.byCurrency.other ? " · " + m.byCurrency.other + " other" : ""));
+    put("integrity-others",m.categoryReview.length);
+    put("integrity-others-meta",(m.total ? (100*m.categoryReview.length/m.total).toFixed(2) : "0.00")+
+      "% of ledger · manual category review");
+    const reviewList=document.getElementById("integrity-category-review-list");
+    if(reviewList) {
+      reviewList.replaceChildren();
+      if(!m.categoryReview.length) {
+        const empty=document.createElement("p");
+        empty.className="integrity-empty";empty.textContent="No remaining Others entries.";
+        reviewList.append(empty);
+      }
+      for(const row of m.categoryReview) {
+        const button=document.createElement("button");
+        button.type="button";button.className="integrity-entry";
+        button.dataset.integrityTransaction=String(row.id);
+        const label=document.createElement("span");
+        const name=document.createElement("strong");name.textContent=row.label;
+        const meta=document.createElement("small");meta.textContent=row.date+" · "+row.currency;
+        label.append(name,meta);
+        const amount=document.createElement("span");
+        amount.className="integrity-entry-value";
+        amount.textContent="¥"+new Intl.NumberFormat("ja-JP",{maximumFractionDigits:2}).format(row.amount);
+        button.append(label,amount);
+        reviewList.append(button);
+      }
+    }
     put("integrity-duplicates", m.duplicate.extraRows);
     put("integrity-duplicates-meta", m.duplicate.groups + " candidate groups; no rows changed");
     put("integrity-balance", m.balance.mismatches);
