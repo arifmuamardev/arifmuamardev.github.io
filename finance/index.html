@@ -16,17 +16,19 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.min.js"></script>
     <!-- Public Neon endpoints live in config.js; database credentials never ship to the browser. -->
     <script src="config.js?v=4.0.1"></script>
-    <script type="module" src="cloud.js?v=4.8.0"></script>
+    <script type="module" src="cloud.js?v=4.9.0"></script>
     <link rel="stylesheet" href="styles.css?v=4.3.0">
     <link rel="stylesheet" href="features/transaction-editor.css?v=4.4.0">
     <link rel="stylesheet" href="features/transaction-history.css?v=4.5.0">
     <link rel="stylesheet" href="features/data-tools.css?v=4.7.0">
     <link rel="stylesheet" href="features/monthly-budget.css?v=4.8.0">
+    <link rel="stylesheet" href="features/monthly-review.css?v=4.9.0">
     <script src="features/transaction-editor.js?v=4.7.0" defer></script>
     <script src="features/transaction-history.js?v=4.5.0" defer></script>
     <script src="features/data-tools.js?v=4.7.0" defer></script>
     <script src="features/monthly-budget.js?v=4.8.0" defer></script>
-    <script src="app.js?v=4.8.0" defer></script>
+    <script src="features/monthly-review.js?v=4.9.0" defer></script>
+    <script src="app.js?v=4.9.0" defer></script>
 </head>
 <body class="dark-theme">
     <div id="auth-gate" class="auth-gate" aria-live="polite">
@@ -81,6 +83,7 @@
                     <button class="nav-btn" data-target="view-transactions"><i class="fa-solid fa-list-check"></i><span>Transactions</span></button>
                     <button class="nav-btn" data-target="view-analytics"><i class="fa-solid fa-chart-pie"></i><span>Analytics</span></button>
                     <button class="nav-btn" data-target="view-budget"><i class="fa-solid fa-bullseye"></i><span>Budget</span></button>
+                    <button class="nav-btn" data-target="view-review"><i class="fa-solid fa-clipboard-check"></i><span>Monthly Review</span></button>
                 </div>
 
                 <div class="sidebar-category">
@@ -470,6 +473,110 @@
                                 <div class="budget-empty">Calculating historical suggestions…</div>
                             </div>
                             <p class="budget-method-note">Suggestions use the three calendar months immediately before the selected month and divide by three, including months with zero spending. “Others” is intentionally excluded.</p>
+                        </section>
+                    </div>
+                </section>
+            </div>
+
+            <div id="view-review" class="dashboard-view hidden">
+                <section class="review-workspace">
+                    <div class="review-hero glass-panel">
+                        <div>
+                            <span class="home-section-kicker">Month-end review</span>
+                            <h2>Monthly Review</h2>
+                            <p>Close a month with one evidence-based view of income, spending, net position, category mix, budget variance, and the transactions that mattered most.</p>
+                        </div>
+                        <div class="review-controls">
+                            <label class="review-month-control">
+                                <span>Review month</span>
+                                <select id="review-month"></select>
+                            </label>
+                            <span id="review-period-status" class="review-period-badge complete">Complete month</span>
+                        </div>
+                    </div>
+
+                    <section class="review-summary-grid" aria-label="Monthly review summary">
+                        <article class="review-summary-card glass-panel">
+                            <span>Income</span>
+                            <strong id="review-income">¥0</strong>
+                            <small id="review-income-change">No prior-month baseline</small>
+                        </article>
+                        <article class="review-summary-card glass-panel">
+                            <span>Spending</span>
+                            <strong id="review-spending">¥0</strong>
+                            <small id="review-spending-change">No prior-month baseline</small>
+                        </article>
+                        <article class="review-summary-card glass-panel">
+                            <span>Net</span>
+                            <strong id="review-net">¥0</strong>
+                            <small>Income minus net spending</small>
+                        </article>
+                        <article class="review-summary-card glass-panel">
+                            <span>Savings rate</span>
+                            <strong id="review-savings-rate">—</strong>
+                            <small id="review-row-count">0 posted transactions</small>
+                        </article>
+                    </section>
+
+                    <div class="review-main-grid">
+                        <section class="review-panel glass-panel">
+                            <div class="review-panel-head">
+                                <div>
+                                    <span class="home-section-kicker">Expense structure</span>
+                                    <h3>Top categories</h3>
+                                </div>
+                                <span id="review-month-title">—</span>
+                            </div>
+                            <div id="review-category-list" class="review-category-list">
+                                <div class="review-empty">Loading category mix…</div>
+                            </div>
+                        </section>
+
+                        <section class="review-panel glass-panel">
+                            <div class="review-panel-head">
+                                <div>
+                                    <span class="home-section-kicker">Largest outflows</span>
+                                    <h3>Transactions that shaped the month</h3>
+                                </div>
+                                <span>Click to inspect</span>
+                            </div>
+                            <div id="review-largest-list" class="review-largest-list">
+                                <div class="review-empty">Loading largest transactions…</div>
+                            </div>
+                        </section>
+                    </div>
+
+                    <div class="review-secondary-grid">
+                        <section id="review-budget-panel" class="review-panel glass-panel no-budget">
+                            <div class="review-panel-head">
+                                <div>
+                                    <span class="home-section-kicker">Plan vs actual</span>
+                                    <h3>Budget variance</h3>
+                                </div>
+                                <span>Saved targets only</span>
+                            </div>
+
+                            <div class="review-budget-summary">
+                                <div><span>Planned</span><strong id="review-budget-planned">¥0</strong></div>
+                                <div><span>Actual</span><strong id="review-budget-actual">¥0</strong></div>
+                                <div><span>Variance</span><strong id="review-budget-variance">—</strong></div>
+                            </div>
+
+                            <div id="review-budget-empty" class="review-empty">No budget targets were saved for this month.</div>
+                            <div id="review-budget-list" class="review-budget-list"></div>
+                        </section>
+
+                        <section class="review-panel glass-panel">
+                            <div class="review-panel-head">
+                                <div>
+                                    <span class="home-section-kicker">Interpretation</span>
+                                    <h3>Review signals</h3>
+                                </div>
+                                <span>Rule-based</span>
+                            </div>
+                            <div id="review-signal-list" class="review-signal-list">
+                                <div class="review-empty">Calculating review signals…</div>
+                            </div>
                         </section>
                     </div>
                 </section>
