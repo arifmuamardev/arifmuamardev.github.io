@@ -1780,10 +1780,12 @@ function getReconciliationPreview() {
 
     const reconciliationStart = window.BUDGET_CONFIG?.ccKuReconciliationStart || "2026-05-16";
     const pendingBills = cashData.reduce((sum, item) => {
+        const itemDate = String(item.tanggal || "").slice(0, 10);
         const isPendingCard =
             item.payment_type === "cashless" &&
             String(item.note || "").includes("CC KU") &&
-            String(item.tanggal || "") >= reconciliationStart;
+            itemDate >= reconciliationStart &&
+            itemDate <= todayTokyoDateString();
         return sum + (isPendingCard ? (Number(item.pengeluaran) || 0) : 0);
     }, 0);
 
