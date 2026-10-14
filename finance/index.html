@@ -17,8 +17,8 @@
     <!-- Public Neon endpoints live in config.js; database credentials never ship to the browser. -->
     <script src="config.js?v=4.0.1"></script>
     <script type="module" src="cloud.js?v=4.0.1"></script>
-    <link rel="stylesheet" href="styles.css?v=4.2.0">
-    <script src="app.js?v=4.2.0" defer></script>
+    <link rel="stylesheet" href="styles.css?v=4.3.0">
+    <script src="app.js?v=4.3.0" defer></script>
 </head>
 <body class="dark-theme">
     <div id="auth-gate" class="auth-gate" aria-live="polite">
@@ -1584,65 +1584,94 @@
 
             <!-- View 6: Balance Reconciliation -->
             <div id="view-reconciliation" class="dashboard-view hidden">
-                <div class="split-layout" style="display: flex; gap: 1.5rem; flex-wrap: wrap;">
-                    <!-- Input Form Card -->
-                    <div class="glass-panel" style="padding: 1.5rem; flex: 1; min-width: 300px;">
-                        <h2 style="margin-bottom: 1.5rem; color: var(--color-primary); font-family: 'Outfit', sans-serif;"><i class="fa-solid fa-wallet"></i> Actual Account Balances</h2>
-                        
-                        <div class="form-group" style="margin-bottom: 1.25rem;">
-                            <label style="display: block; margin-bottom: 0.5rem; font-weight: 500; color: var(--text-secondary);"><i class="fa-solid fa-wallet"></i> Cash in Wallet (¥)</label>
-                            <input type="number" id="recon-wallet" class="form-control" value="3000" style="width: 100%; padding: 0.75rem; border-radius: var(--border-radius-sm); border: 1px solid var(--border-color); background: var(--bg-card); color: var(--text-primary); font-size: 1rem; font-family: inherit;">
-                        </div>
-                        
-                        <div class="form-group" style="margin-bottom: 1.25rem;">
-                            <label style="display: block; margin-bottom: 0.5rem; font-weight: 500; color: var(--text-secondary);"><i class="fa-solid fa-building-columns"></i> Japan Post Bank (¥)</label>
-                            <input type="number" id="recon-jp-bank" class="form-control" value="169740" style="width: 100%; padding: 0.75rem; border-radius: var(--border-radius-sm); border: 1px solid var(--border-color); background: var(--bg-card); color: var(--text-primary); font-size: 1rem; font-family: inherit;">
-                        </div>
-                        
-                        <div class="form-group" style="margin-bottom: 1.5rem;">
-                            <label style="display: block; margin-bottom: 0.5rem; font-weight: 500; color: var(--text-secondary);"><i class="fa-solid fa-building-columns"></i> Hokuriku Bank (¥)</label>
-                            <input type="number" id="recon-hokuriku-bank" class="form-control" value="347283" style="width: 100%; padding: 0.75rem; border-radius: var(--border-radius-sm); border: 1px solid var(--border-color); background: var(--bg-card); color: var(--text-primary); font-size: 1rem; font-family: inherit;">
-                        </div>
-                        
-                        <button id="btn-reconcile" class="btn-primary" style="width: 100%; padding: 0.75rem; border: none; border-radius: var(--border-radius-sm); background: var(--color-primary); color: white; font-weight: 600; cursor: pointer; transition: background 0.2s; font-size: 1rem; display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
-                            <i class="fa-solid fa-screwdriver-wrench"></i> Fix & Reconcile Balance
-                        </button>
-                    </div>
-
-                    <!-- Calculations & Diagnostic Card -->
-                    <div class="glass-panel" style="padding: 1.5rem; flex: 1.5; min-width: 320px; display: flex; flex-direction: column; justify-content: space-between; gap: 1.5rem;">
+                <section class="recon-workspace">
+                    <div class="recon-intro glass-panel">
                         <div>
-                            <h2 style="margin-bottom: 1.5rem; color: var(--color-primary); font-family: 'Outfit', sans-serif;"><i class="fa-solid fa-calculator"></i> Diagnostic Calculations</h2>
-                            
-                            <table class="recon-calc-table" style="width: 100%; border-collapse: collapse;">
-                                <tr style="border-bottom: 1px solid var(--border-color);">
-                                    <td style="padding: 0.75rem 0; color: var(--text-secondary);"><i class="fa-solid fa-sack-dollar"></i> Total Actual Funds</td>
-                                    <td id="calc-actual-funds" style="padding: 0.75rem 0; text-align: right; font-weight: 600; color: var(--text-primary); font-family: monospace; font-size: 1.05rem;">¥0</td>
-                                </tr>
-                                <tr style="border-bottom: 1px solid var(--border-color);">
-                                    <td style="padding: 0.75rem 0; color: var(--text-secondary);"><i class="fa-solid fa-file-invoice-dollar"></i> Pending CC KU Bills (July & August)</td>
-                                    <td id="calc-pending-bills" style="padding: 0.75rem 0; text-align: right; font-weight: 600; color: var(--color-expense); font-family: monospace; font-size: 1.05rem;">- ¥0</td>
-                                </tr>
-                                <tr style="border-bottom: 2px solid var(--text-secondary);">
-                                    <td style="padding: 0.75rem 0; font-weight: 600; color: var(--text-primary);"><i class="fa-solid fa-circle-dollar-to-slot"></i> Expected Net JPY Balance</td>
-                                    <td id="calc-expected-net" style="padding: 0.75rem 0; text-align: right; font-weight: 700; color: var(--color-primary); font-family: monospace; font-size: 1.1rem;">¥0</td>
-                                </tr>
-                                <tr style="border-bottom: 1px solid var(--border-color);">
-                                    <td style="padding: 0.75rem 0; color: var(--text-secondary);"><i class="fa-solid fa-chart-line"></i> Current Dashboard Net Balance</td>
-                                    <td id="calc-dashboard-balance" style="padding: 0.75rem 0; text-align: right; font-weight: 600; color: var(--text-primary); font-family: monospace; font-size: 1.05rem;">¥0</td>
-                                </tr>
-                                <tr style="font-size: 1.15rem;">
-                                    <td style="padding: 1rem 0; font-weight: 700; color: var(--text-primary);"><i class="fa-solid fa-circle-minus"></i> Calculated Discrepancy</td>
-                                    <td id="calc-discrepancy" style="padding: 1rem 0; text-align: right; font-weight: 800; font-family: monospace; font-size: 1.25rem;">¥0</td>
-                                </tr>
-                            </table>
+                            <span class="home-section-kicker">Balance safety check</span>
+                            <h2>Reconcile recorded balance with actual funds</h2>
+                            <p>Enter what you can physically verify now. The dashboard will calculate the adjustment first; nothing is written until you explicitly confirm.</p>
                         </div>
-
-                        <div id="recon-status-message" class="info-alert" style="padding: 1rem; border-radius: var(--border-radius-sm); background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.2); color: #3b82f6; font-size: 0.85rem; line-height: 1.4;">
-                            <i class="fa-solid fa-circle-info"></i> The discrepancy indicates how much unlogged history needs to be adjusted. Click "Fix & Reconcile Balance" to automatically insert an adjusting transaction to match your actual funds.
+                        <div class="recon-steps" aria-label="Reconciliation steps">
+                            <span class="active"><b>1</b> Enter balances</span>
+                            <span><b>2</b> Review</span>
+                            <span><b>3</b> Record</span>
                         </div>
                     </div>
-                </div>
+
+                    <div class="recon-layout">
+                        <section class="recon-entry-card glass-panel">
+                            <div class="recon-card-heading">
+                                <div>
+                                    <span class="home-section-kicker">Step 1</span>
+                                    <h3>Actual balances</h3>
+                                </div>
+                                <i class="fa-solid fa-wallet"></i>
+                            </div>
+                            <p class="recon-helper">Use balances you can verify now. Fields are intentionally blank so old values are never reused accidentally.</p>
+
+                            <label class="recon-field">
+                                <span><i class="fa-solid fa-wallet"></i> Cash in wallet</span>
+                                <div class="recon-input-wrap"><span>¥</span><input type="number" min="0" step="1" id="recon-wallet" inputmode="decimal" placeholder="0"></div>
+                            </label>
+                            <label class="recon-field">
+                                <span><i class="fa-solid fa-building-columns"></i> Japan Post Bank</span>
+                                <div class="recon-input-wrap"><span>¥</span><input type="number" min="0" step="1" id="recon-jp-bank" inputmode="decimal" placeholder="0"></div>
+                            </label>
+                            <label class="recon-field">
+                                <span><i class="fa-solid fa-building-columns"></i> Hokuriku Bank</span>
+                                <div class="recon-input-wrap"><span>¥</span><input type="number" min="0" step="1" id="recon-hokuriku-bank" inputmode="decimal" placeholder="0"></div>
+                            </label>
+
+                            <div class="recon-entry-total">
+                                <span>Total actual funds</span>
+                                <strong id="calc-actual-funds">¥0</strong>
+                            </div>
+                        </section>
+
+                        <section class="recon-review-card glass-panel">
+                            <div class="recon-card-heading">
+                                <div>
+                                    <span class="home-section-kicker">Step 2</span>
+                                    <h3>Review proposed adjustment</h3>
+                                </div>
+                                <i class="fa-solid fa-scale-balanced"></i>
+                            </div>
+
+                            <div class="recon-equation">
+                                <div><span>Actual funds</span><strong id="recon-review-actual">¥0</strong></div>
+                                <div class="operator">−</div>
+                                <div><span>Pending CC KU</span><strong id="calc-pending-bills">¥0</strong></div>
+                                <div class="operator">=</div>
+                                <div class="accent"><span>Expected ledger balance</span><strong id="calc-expected-net">¥0</strong></div>
+                            </div>
+
+                            <div class="recon-comparison">
+                                <div><span>Current recorded balance</span><strong id="calc-dashboard-balance">¥0</strong></div>
+                                <div class="recon-adjustment-box">
+                                    <span>Adjustment that would be recorded</span>
+                                    <strong id="calc-discrepancy">—</strong>
+                                    <small id="recon-adjustment-explanation">Enter all three balances to calculate.</small>
+                                </div>
+                            </div>
+
+                            <div id="recon-status-message" class="recon-status info">
+                                <i class="fa-solid fa-circle-info"></i>
+                                <span>This screen is a preview. No database change has been made.</span>
+                            </div>
+
+                            <label class="recon-confirm-row">
+                                <input type="checkbox" id="recon-review-confirm" disabled>
+                                <span>I reviewed the actual balances and the adjustment above.</span>
+                            </label>
+
+                            <button id="btn-reconcile" class="recon-submit-btn" disabled>
+                                <i class="fa-solid fa-lock"></i>
+                                Record adjustment
+                            </button>
+                            <p class="recon-write-note"><i class="fa-solid fa-shield-halved"></i> Recording creates one reconciliation transaction through the protected Neon database function.</p>
+                        </section>
+                    </div>
+                </section>
             </div>
 
             <!-- View 5: Income Analyzer -->
@@ -2700,161 +2729,87 @@
 
             <!-- AI Insights View -->
             <div id="view-ai-insights" class="dashboard-view hidden">
-                <!-- Header -->
-                <div class="view-header">
-                    <div class="view-title-area">
-                        <h2>Financial Advisor</h2>
-                        <p>Self-learning financial advice, budget simulations, and spending health diagnostics.</p>
-                    </div>
-                    <div class="view-header-badge" style="background: rgba(236, 72, 153, 0.1); border: 1px solid var(--accent-pink); padding: 6px 12px; border-radius: 20px; font-size: 0.85rem; font-weight: 500; color: var(--accent-pink);">
-                        <i class="fa-solid fa-wand-magic-sparkles" style="margin-right: 6px;"></i> Active Advisor: Antigravity v2
-                    </div>
-                </div>
-
-                <!-- Advisor Welcome Card -->
-                <div class="card glass-panel" style="margin-bottom: 24px; padding: 24px; position: relative; overflow: hidden; background: linear-gradient(135deg, rgba(99, 102, 241, 0.15), rgba(236, 72, 153, 0.15)); border: 1px solid rgba(255, 255, 255, 0.15);">
-                    <div style="display: flex; gap: 24px; align-items: center; position: relative; z-index: 2;">
-                        <div class="health-score-circle" id="ai-health-circle" style="position: relative; width: 100px; height: 100px; border-radius: 50%; background: conic-gradient(var(--accent-pink) 0% 88%, rgba(255,255,255,0.1) 88% 100%); display: flex; align-items: center; justify-content: center; box-shadow: 0 0 15px rgba(236,72,153,0.3);">
-                            <div style="width: 86px; height: 86px; border-radius: 50%; background: var(--bg-card); display: flex; flex-direction: column; align-items: center; justify-content: center;">
-                                <span style="font-size: 1.8rem; font-weight: 800; color: var(--text-primary); font-family: 'Outfit', sans-serif;" id="ai-health-score">88</span>
-                                <span style="font-size: 0.7rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px;">Health Score</span>
-                            </div>
+                <section class="insights-workspace">
+                    <div class="insights-hero glass-panel">
+                        <div>
+                            <span class="home-section-kicker">Rule-based analysis</span>
+                            <h2>Financial Insights</h2>
+                            <p>Signals are calculated directly from your recorded ledger. No generative AI is used here, and every insight is tied to visible data.</p>
                         </div>
-                        <div style="flex: 1;">
-                            <h3 style="font-family: 'Outfit', sans-serif; font-size: 1.25rem; font-weight: 600; color: var(--text-primary); margin-bottom: 8px;">Advisor Diagnostic Summary</h3>
-                            <p style="color: var(--text-secondary); font-size: 0.95rem; line-height: 1.6; margin: 0;" id="ai-advisor-voice">
-                                Hello Arif! Your overall financial health is **strong (88/100)**. Your MEXT Scholarship covers your basic needs, and you have set up a stable utility payment schedule. However, I have identified a few optimization opportunities regarding your cash withdrawals and SPayLater commitments...
-                            </p>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Insights Cards Grid -->
-                <div class="grid-2col" style="margin-bottom: 24px;">
-                    <!-- Card 1: Rent & Housing -->
-                    <div class="card glass-panel" style="padding: 20px;">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                            <span style="font-size: 0.8rem; font-weight: 600; text-transform: uppercase; color: var(--accent-indigo); letter-spacing: 1px; display: flex; align-items: center; gap: 6px;">
-                                <i class="fa-solid fa-house"></i> Rent & Housing
-                            </span>
-                            <span class="status-badge status-success" style="background: rgba(16, 185, 129, 0.1); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.2);">Stable</span>
-                        </div>
-                        <div style="margin-bottom: 16px;">
-                            <div style="font-size: 1.8rem; font-weight: 700; color: var(--text-primary); font-family: 'Outfit', sans-serif; margin-bottom: 4px;">31.2%</div>
-                            <div style="font-size: 0.85rem; color: var(--text-secondary);">Rent-to-Scholarship Ratio (¥45,228 paid of ¥145,000)</div>
-                        </div>
-                        <p style="font-size: 0.9rem; color: var(--text-secondary); line-height: 1.5; margin: 0;">
-                            Your rent is within the healthy boundary. Typical housing guidelines recommend staying under 30% of income; at 31.2%, your rent is stable. Ensure non-housing discretionary spending is controlled.
-                        </p>
+                        <div class="insights-method-badge"><i class="fa-solid fa-code-branch"></i> Deterministic rules</div>
                     </div>
 
-                    <!-- Card 2: Utilities -->
-                    <div class="card glass-panel" style="padding: 20px;">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                            <span style="font-size: 0.8rem; font-weight: 600; text-transform: uppercase; color: var(--accent-orange); letter-spacing: 1px; display: flex; align-items: center; gap: 6px;">
-                                <i class="fa-solid fa-bolt"></i> Seasonal Utilities
-                            </span>
-                            <span class="status-badge status-warning" style="background: rgba(245, 158, 11, 0.1); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.2);">Forecast Spike</span>
-                        </div>
-                        <div style="margin-bottom: 16px;">
-                            <div style="font-size: 1.8rem; font-weight: 700; color: var(--text-primary); font-family: 'Outfit', sans-serif; margin-bottom: 4px;">¥7,377</div>
-                            <div style="font-size: 0.85rem; color: var(--text-secondary);">Combined Monthly Average Utilities (Gas, Elec, Water, Mobile)</div>
-                        </div>
-                        <p style="font-size: 0.9rem; color: var(--text-secondary); line-height: 1.5; margin: 0;">
-                            Gas bills peaked in winter (Jan/Feb). As we move into high summer (July/August), your electricity bill will likely increase due to air conditioner usage. Recommend setting aside an extra **¥2,000/month** as a buffer.
-                        </p>
-                    </div>
+                    <section class="insights-summary-grid" aria-label="Financial insight summary">
+                        <article class="insight-metric glass-panel">
+                            <span>Recent monthly spending</span>
+                            <strong id="insight-recent-spending">¥0</strong>
+                            <small id="insight-spending-window">Last complete active month</small>
+                        </article>
+                        <article class="insight-metric glass-panel">
+                            <span>Top expense category</span>
+                            <strong id="insight-top-category">—</strong>
+                            <small id="insight-top-category-share">No data yet</small>
+                        </article>
+                        <article class="insight-metric glass-panel">
+                            <span>Fixed living costs</span>
+                            <strong id="insight-fixed-costs">¥0</strong>
+                            <small>Average rent + utilities per active month</small>
+                        </article>
+                        <article class="insight-metric glass-panel">
+                            <span>Data freshness</span>
+                            <strong id="insight-freshness">—</strong>
+                            <small id="insight-freshness-note">Latest ledger record</small>
+                        </article>
+                    </section>
 
-                    <!-- Card 3: Debt & SPayLater -->
-                    <div class="card glass-panel" style="padding: 20px;">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                            <span style="font-size: 0.8rem; font-weight: 600; text-transform: uppercase; color: var(--accent-red); letter-spacing: 1px; display: flex; align-items: center; gap: 6px;">
-                                <i class="fa-solid fa-credit-card"></i> Installments Alert
-                            </span>
-                            <span class="status-badge status-danger" style="background: rgba(239, 68, 68, 0.1); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.2);">Active Debt</span>
-                        </div>
-                        <div style="margin-bottom: 16px;">
-                            <div style="font-size: 1.8rem; font-weight: 700; color: var(--text-primary); font-family: 'Outfit', sans-serif; margin-bottom: 4px;">Sep 2026</div>
-                            <div style="font-size: 0.85rem; color: var(--text-secondary);">SPayLater Active Commitments Expiry</div>
-                        </div>
-                        <p style="font-size: 0.9rem; color: var(--text-secondary); line-height: 1.5; margin: 0;">
-                            You have outstanding Shopee/SPayLater commitments running monthly. To maximize your monthly saving potential, avoid making any new installments or card purchases until these expire in **September 2026**.
-                        </p>
-                    </div>
-
-                    <!-- Card 4: Phone & Mobile Bill -->
-                    <div class="card glass-panel" style="padding: 20px;">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                            <span style="font-size: 0.8rem; font-weight: 600; text-transform: uppercase; color: var(--accent-pink); letter-spacing: 1px; display: flex; align-items: center; gap: 6px;">
-                                <i class="fa-solid fa-mobile-screen-button"></i> Mobile Efficiency
-                            </span>
-                            <span class="status-badge status-success" style="background: rgba(16, 185, 129, 0.1); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.2);">Optimal</span>
-                        </div>
-                        <div style="margin-bottom: 16px;">
-                            <div style="font-size: 1.8rem; font-weight: 700; color: var(--text-primary); font-family: 'Outfit', sans-serif; margin-bottom: 4px;">¥1,452</div>
-                            <div style="font-size: 0.85rem; color: var(--text-secondary);">Average Phone Bill (DXHUB / JP SIM)</div>
-                        </div>
-                        <p style="font-size: 0.9rem; color: var(--text-secondary); line-height: 1.5; margin: 0;">
-                            Your phone bill is highly optimized! The average mobile bill in Japan sits around ¥3,500/month. By keeping your monthly payment at ¥1,452, you save approximately **¥24,000 annually** compared to typical carriers.
-                        </p>
-                    </div>
-                </div>
-
-                <!-- Interactive Budget Simulator -->
-                <div class="card glass-panel" style="padding: 24px; margin-bottom: 24px;">
-                    <h3 style="font-family: 'Outfit', sans-serif; font-size: 1.2rem; font-weight: 600; color: var(--text-primary); margin-bottom: 8px; display: flex; align-items: center; gap: 8px;">
-                        <i class="fa-solid fa-sliders" style="color: var(--accent-pink);"></i> Interactive Budget Simulator
-                    </h3>
-                    <p style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 20px;">
-                        Adjust the sliders below to simulate target spending caps and see how they impact your overall health score and monthly savings.
-                    </p>
-
-                    <div class="grid-2col" style="align-items: center;">
-                        <!-- Sliders -->
-                        <div style="display: flex; flex-direction: column; gap: 20px;">
+                    <section class="insights-signal-panel glass-panel">
+                        <div class="insights-section-heading">
                             <div>
-                                <div style="display: flex; justify-content: space-between; font-size: 0.85rem; font-weight: 500; margin-bottom: 6px;">
-                                    <span style="color: var(--text-primary);">Groceries (¥/month)</span>
-                                    <span style="color: var(--accent-indigo);" id="val-groceries">¥30,000</span>
-                                </div>
-                                <input type="range" min="15000" max="50000" step="1000" value="30000" class="budget-slider" id="slider-groceries" style="width: 100%; height: 6px; border-radius: 4px; background: rgba(255,255,255,0.1); outline: none; -webkit-appearance: none;">
+                                <span class="home-section-kicker">Signals</span>
+                                <h3>What the ledger is telling you</h3>
+                            </div>
+                            <span id="insight-signal-count" class="insights-count">0 signals</span>
+                        </div>
+                        <div id="insights-signal-list" class="insights-signal-list">
+                            <div class="home-empty-state">Calculating insights…</div>
+                        </div>
+                    </section>
+
+                    <section class="scenario-panel glass-panel">
+                        <div class="insights-section-heading">
+                            <div>
+                                <span class="home-section-kicker">Scenario tool</span>
+                                <h3>Monthly budget simulator</h3>
+                            </div>
+                            <span class="insights-count">What-if only</span>
+                        </div>
+                        <p class="scenario-intro">Adjust discretionary targets. The simulator uses your ledger-derived average rent, utilities, and income when available; otherwise it falls back to baseline assumptions.</p>
+
+                        <div class="scenario-grid">
+                            <div class="scenario-sliders">
+                                <label>
+                                    <span>Groceries <strong id="val-groceries">¥30,000</strong></span>
+                                    <input type="range" min="15000" max="50000" step="1000" value="30000" class="budget-slider" id="slider-groceries">
+                                </label>
+                                <label>
+                                    <span>Entertainment & dining <strong id="val-dining">¥15,000</strong></span>
+                                    <input type="range" min="5000" max="30000" step="1000" value="15000" class="budget-slider" id="slider-dining">
+                                </label>
+                                <label>
+                                    <span>Discretionary & shopping <strong id="val-discretionary">¥10,000</strong></span>
+                                    <input type="range" min="2000" max="25000" step="1000" value="10000" class="budget-slider" id="slider-discretionary">
+                                </label>
                             </div>
 
-                            <div>
-                                <div style="display: flex; justify-content: space-between; font-size: 0.85rem; font-weight: 500; margin-bottom: 6px;">
-                                    <span style="color: var(--text-primary);">Entertainment & Dining Out (¥/month)</span>
-                                    <span style="color: var(--accent-orange);" id="val-dining">¥15,000</span>
-                                </div>
-                                <input type="range" min="5000" max="30000" step="1000" value="15000" class="budget-slider" id="slider-dining" style="width: 100%; height: 6px; border-radius: 4px; background: rgba(255,255,255,0.1); outline: none; -webkit-appearance: none;">
-                            </div>
-
-                            <div>
-                                <div style="display: flex; justify-content: space-between; font-size: 0.85rem; font-weight: 500; margin-bottom: 6px;">
-                                    <span style="color: var(--text-primary);">Discretionary & Shopping (¥/month)</span>
-                                    <span style="color: var(--accent-pink);" id="val-discretionary">¥10,000</span>
-                                </div>
-                                <input type="range" min="2000" max="25000" step="1000" value="10000" class="budget-slider" id="slider-discretionary" style="width: 100%; height: 6px; border-radius: 4px; background: rgba(255,255,255,0.1); outline: none; -webkit-appearance: none;">
+                            <div class="scenario-output">
+                                <div><span>Estimated savings rate</span><strong id="sim-savings-rate">—</strong></div>
+                                <div><span>Estimated monthly savings</span><strong id="sim-savings-amount">—</strong></div>
+                                <p id="sim-commentary">Move a slider to explore a scenario.</p>
+                                <small id="sim-assumptions">Assumptions will appear after ledger data loads.</small>
                             </div>
                         </div>
-
-                        <!-- Outputs Display -->
-                        <div style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); padding: 20px; border-radius: 12px; display: flex; flex-direction: column; gap: 16px;">
-                            <div style="display: flex; justify-content: space-between; align-items: center;">
-                                <span style="font-size: 0.9rem; color: var(--text-secondary);">Target Savings Rate:</span>
-                                <span style="font-size: 1.4rem; font-weight: 700; color: #10b981; font-family: 'Outfit', sans-serif;" id="sim-savings-rate">30.2%</span>
-                            </div>
-                            <div style="display: flex; justify-content: space-between; align-items: center;">
-                                <span style="font-size: 0.9rem; color: var(--text-secondary);">Simulated Monthly Savings:</span>
-                                <span style="font-size: 1.4rem; font-weight: 700; color: var(--text-primary); font-family: 'Outfit', sans-serif;" id="sim-savings-amount">¥43,800</span>
-                            </div>
-                            <div style="border-top: 1px solid rgba(255,255,255,0.08); padding-top: 12px;">
-                                <p style="font-size: 0.85rem; color: var(--text-secondary); line-height: 1.5; margin: 0;" id="sim-commentary">
-                                    Keeping discretionary spending at ¥10k/month is optimal. You can comfortably sustain your scholarship and accumulate emergency savings.
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+                    </section>
+                </section>
             </div>
 
             <!-- View: Online Shopping -->
