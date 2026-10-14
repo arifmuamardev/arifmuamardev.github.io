@@ -1395,6 +1395,7 @@ function setupTransactionWorkspace() {
     window.MonthlyBudget?.init();
     window.MonthlyReview?.init();
     window.FinanceForecast?.init();
+    window.FinanceIntegrity?.init();
 
     window.addEventListener("budget:data-tools-error", event => {
         showToast(event.detail?.message || "Data export failed.", "error");
@@ -1670,6 +1671,7 @@ async function fetchAndInitData() {
             cash: cashData,
             budgets: payload.budgets || []
         });
+        window.FinanceIntegrity?.setData({ cash: cashData });
 
         const filtered = getFilteredData();
         const filteredW = getFilteredWithdrawals();
@@ -1735,6 +1737,9 @@ function initNavigation() {
                 } else if (targetViewId === "view-forecast") {
                     topBarTitle.textContent = "Forecast";
                     topBarDesc.textContent = "Separate known commitments from conservative historical scenarios";
+                } else if (targetViewId === "view-integrity") {
+                    topBarTitle.textContent = "Data Integrity";
+                    topBarDesc.textContent = "Review potential ledger issues without changing financial records";
                 } else if (targetViewId === "view-transactions") {
                     topBarTitle.textContent = "Transactions";
                     topBarDesc.textContent = "Search, filter, and inspect your complete ledger";
@@ -1817,6 +1822,8 @@ function initNavigation() {
                 window.MonthlyReview?.render();
             } else if (targetViewId === "view-forecast") {
                 window.FinanceForecast?.render();
+            } else if (targetViewId === "view-integrity") {
+                window.FinanceIntegrity?.render();
             } else if (targetViewId === "view-income") {
                 if (incomeMonthlyChart) incomeMonthlyChart.resize();
                 if (incomeCategoryChart) incomeCategoryChart.resize();

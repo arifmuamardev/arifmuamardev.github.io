@@ -24,13 +24,15 @@
     <link rel="stylesheet" href="features/monthly-budget.css?v=4.8.0">
     <link rel="stylesheet" href="features/monthly-review.css?v=4.9.0">
     <link rel="stylesheet" href="features/forecast.css?v=5.0.0">
+    <link rel="stylesheet" href="features/data-integrity.css?v=5.2.0">
     <script src="features/transaction-editor.js?v=4.7.0" defer></script>
     <script src="features/transaction-history.js?v=4.5.0" defer></script>
     <script src="features/data-tools.js?v=4.7.0" defer></script>
     <script src="features/monthly-budget.js?v=4.8.0" defer></script>
     <script src="features/monthly-review.js?v=4.9.0" defer></script>
     <script src="features/forecast.js?v=5.1.0" defer></script>
-    <script src="app.js?v=5.0.0" defer></script>
+    <script src="features/data-integrity.js?v=5.2.0" defer></script>
+    <script src="app.js?v=5.2.0" defer></script>
 </head>
 <body class="dark-theme">
     <div id="auth-gate" class="auth-gate" aria-live="polite">
@@ -168,6 +170,7 @@
                     <div class="sidebar-category-title">Tools</div>
                     <button class="nav-btn" data-target="view-ai-insights"><i class="fa-solid fa-lightbulb"></i><span>Insights</span></button>
                     <button class="nav-btn" data-target="view-data-tools"><i class="fa-solid fa-database"></i><span>Data & Backup</span></button>
+                    <button class="nav-btn" data-target="view-integrity"><i class="fa-solid fa-shield-halved"></i><span>Data Integrity</span></button>
                 </div>
             </nav>
             <div class="sidebar-account">
@@ -618,6 +621,48 @@
                             </div>
                         </section>
                     </div>
+                </section>
+            </div>
+
+            <div id="view-integrity" class="dashboard-view hidden">
+                <section class="integrity-workspace">
+                    <div class="integrity-hero glass-panel">
+                        <span class="home-section-kicker">Read-only · data assurance</span>
+                        <h2>Data Integrity & Review</h2>
+                        <p>Investigate possible duplicate entries, JPY running-balance differences, IDR-origin conversion exceptions, and data freshness. Findings are review candidates, not automatic corrections or proof of error.</p>
+                    </div>
+                    <div class="integrity-kpis">
+                        <article class="integrity-kpi glass-panel"><span>Ledger records</span><strong id="integrity-total">—</strong><small id="integrity-split">Loading…</small></article>
+                        <article class="integrity-kpi glass-panel"><span>Potential exact duplicates</span><strong id="integrity-duplicates">—</strong><small id="integrity-duplicates-meta">No records changed</small></article>
+                        <article class="integrity-kpi glass-panel"><span>JPY balance differences</span><strong id="integrity-balance">—</strong><small id="integrity-balance-meta">Comparable recorded checkpoints</small></article>
+                        <article class="integrity-kpi glass-panel"><span>IDR conversion exceptions</span><strong id="integrity-fx">—</strong><small id="integrity-fx-meta">Measured against historical stored pairs</small></article>
+                        <article class="integrity-kpi glass-panel"><span>Latest posted transaction</span><strong id="integrity-freshness">—</strong><small id="integrity-freshness-meta">Staleness is not itself a data error</small></article>
+                        <article class="integrity-kpi glass-panel"><span>Invalid dates / currencies</span><strong id="integrity-invalid">—</strong><small id="integrity-invalid-meta">Basic schema-quality checks</small></article>
+                    </div>
+                    <div id="integrity-quality-note" class="integrity-note glass-panel hidden"></div>
+                    <div class="integrity-panels">
+                        <section class="integrity-panel glass-panel">
+                            <h3>Balance checkpoints to review</h3>
+                            <p>JPY-only posted records with recorded balances. We compare consecutive balance checkpoints with intervening JPY income and expenses. Account transfers and incomplete account scope can create legitimate differences. Largest gaps first.</p>
+                            <div id="integrity-balance-list" class="integrity-list"></div>
+                        </section>
+                        <section class="integrity-panel glass-panel">
+                            <h3>Possible duplicate records</h3>
+                            <p>Same date, currency, amounts, item, category, place, payment type, note, conversion amount, and running balance. Identical purchases may still be legitimate. Click to inspect one record.</p>
+                            <div id="integrity-duplicate-list" class="integrity-list"></div>
+                        </section>
+                        <section class="integrity-panel glass-panel">
+                            <h3>IDR conversion exceptions</h3>
+                            <p>Checks stored IDR equivalents against the dataset's typical historical rate; rounding tolerance is at least Rp1 or 2%. Non-matching values may use a valid different rate. JPY-origin expenses are not tested with this rule.</p>
+                            <div id="integrity-fx-list" class="integrity-list"></div>
+                        </section>
+                        <aside class="integrity-panel glass-panel">
+                            <h3>Interpretation and next steps</h3>
+                            <p>Source currency is retained separately from the normalized JPY amount. IDR-origin records normally lack a JPY running-balance checkpoint, so the JPY-balance test intentionally excludes them.</p>
+                            <p>These checks cannot establish bank reconciliation, missing off-ledger transactions, or whether two similar purchases truly occurred. Verify against bank statements and receipts before editing an entry. All checks run locally on data already loaded after authentication.</p>
+                        </aside>
+                    </div>
+                    <div class="integrity-method glass-panel"><strong>Scope:</strong> Read-only, no database writes, no automated deduplication, no changes to authentication or account balances. The latest running balance is not recomputed or overwritten by this diagnostic.</div>
                 </section>
             </div>
 

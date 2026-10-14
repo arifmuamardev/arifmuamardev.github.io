@@ -1,4 +1,4 @@
-name: Finance Forecast regression tests
+name: Finance dashboard quality regression tests
 
 on:
   push:
@@ -22,4 +22,4 @@ jobs:
         with:
           node-version: "22"
       - name: Run read-only Forecast regression tests
-        run: node --test finance/tests/forecast.test.cjs
+        run: node --test finance/tests/*.test.cjs
