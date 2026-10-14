@@ -208,6 +208,23 @@ import { createClient } from "https://cdn.jsdelivr.net/npm/@neondatabase/neon-js
     return data;
   }
 
+  async function getTransactionHistory(transactionId) {
+    const neon = getClient();
+    if (!neon) throw new Error("Neon is not configured.");
+    const id = Number(transactionId);
+    if (!Number.isFinite(id)) return [];
+
+    const { data, error } = await neon
+      .from("cash_transaction_audit")
+      .select("audit_id,transaction_id,action,old_row,new_row,changed_at")
+      .eq("transaction_id", id)
+      .order("changed_at", { ascending: false });
+
+    if (error) throw error;
+    return data || [];
+  }
+
+
   function bindAuthUI() {
     const form = document.getElementById("auth-form");
     const logout = document.getElementById("logout-btn");
@@ -250,6 +267,7 @@ import { createClient } from "https://cdn.jsdelivr.net/npm/@neondatabase/neon-js
     loadAll,
     reconcile,
     saveTransaction,
+    getTransactionHistory,
     signOut,
     bindAuthUI,
     setGateState

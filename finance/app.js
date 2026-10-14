@@ -20,6 +20,7 @@ let activeFilters = {
 let activePlatformFilter = "all";
 let activeTransactionPaymentFilter = "all";
 let activeTransactionFlowFilter = "all";
+let activeTransactionStatusFilter = "posted";
 let controlsInitialized = false;
 
 // Chart.js Instances
@@ -95,6 +96,27 @@ function isExcludedTransfer(itemNormalized) {
     return itemNormalized === 'Self-Transfer (Internal)' || 
            itemNormalized === 'Bank Inflow / Auto-Deposit' || 
            itemNormalized === 'Loan Repayment (Ryan)';
+}
+
+function todayTokyoDateString() {
+    const parts = Object.fromEntries(
+        new Intl.DateTimeFormat("en-CA", {
+            timeZone: "Asia/Tokyo",
+            year: "numeric",
+            month: "2-digit",
+            day: "2-digit"
+        }).formatToParts(new Date()).filter(p => p.type !== "literal").map(p => [p.type, p.value])
+    );
+    return `${parts.year}-${parts.month}-${parts.day}`;
+}
+
+function isFutureDatedTransaction(item) {
+    const date = String(item?.tanggal || "").slice(0, 10);
+    return Boolean(date && date > todayTokyoDateString());
+}
+
+function getPostedTransactions(data) {
+    return (data || []).filter(item => !isFutureDatedTransaction(item));
 }
 
 // Extract unique Year-Month values from transactions (sorted chronologically)
@@ -278,6 +300,7 @@ function populateFilters(data) {
 
 // Update KPI Metrics Cards
 function updateKPIs(filteredData) {
+    filteredData = getPostedTransactions(filteredData);
     let balanceVal = 0;
     let incomeVal = 0;
     let spendingVal = 0;
@@ -377,7 +400,11 @@ function updateHomeCommandCenter() {
     if (greetingEl) greetingEl.textContent = `${greeting}. Your money at a glance.`;
 
     const dateKey = item => String(item?.tanggal || "").slice(0, 7);
-    const currentMonth = cashData.filter(item => dateKey(item) === monthKey);
+    const todayKey = `${year}-${String(month).padStart(2, "0")}-${String(tokyoParts.day).padStart(2, "0")}`;
+    const currentMonth = cashData.filter(item =>
+        dateKey(item) === monthKey &&
+        String(item?.tanggal || "").slice(0, 10) <= todayKey
+    );
     const currentDay = Number(tokyoParts.day);
     const previousMonth = cashData.filter(item =>
         dateKey(item) === previousKey &&
@@ -491,7 +518,7 @@ function updateHomeCommandCenter() {
         });
     }
 
-    const latestTxn = [...cashData].reverse().find(item => item.tanggal);
+    const latestTxn = [...cashData].reverse().find(item => item.tanggal && !isFutureDatedTransaction(item));
     if (latestTxn?.tanggal) {
         const latestDate = new Date(`${latestTxn.tanggal}T00:00:00+09:00`);
         const daysOld = Math.floor((now.getTime() - latestDate.getTime()) / 86400000);
@@ -521,7 +548,7 @@ function updateHomeCommandCenter() {
         </div>
     `).join("");
 
-    const recent = [...cashData]
+    const recent = getPostedTransactions(cashData)
         .sort((a, b) => String(b.tanggal || "").localeCompare(String(a.tanggal || "")) || Number(b.id || 0) - Number(a.id || 0))
         .slice(0, 5);
 
@@ -656,6 +683,10 @@ function getTransactionViewData(filteredData) {
         const expense = Number(item.pengeluaran) || 0;
         if (activeTransactionFlowFilter === "income" && !(income > 0 || expense < 0)) return false;
         if (activeTransactionFlowFilter === "expense" && !(expense > 0)) return false;
+
+        const scheduled = isFutureDatedTransaction(item);
+        if (activeTransactionStatusFilter === "posted" && scheduled) return false;
+        if (activeTransactionStatusFilter === "scheduled" && !scheduled) return false;
         return true;
     });
 }
@@ -739,6 +770,7 @@ function openTransactionDrawer(item) {
     });
 
     window.TransactionEditor?.setCurrent(item);
+    window.TransactionHistory?.render(item);
     scrim.classList.remove("hidden");
     drawer.classList.add("open");
     drawer.setAttribute("aria-hidden", "false");
@@ -777,6 +809,7 @@ function updateLedgerTable(filteredData) {
 
     sortedData.forEach(item => {
         const row = document.createElement("tr");
+        if (isFutureDatedTransaction(item)) row.classList.add("transaction-scheduled-row");
         row.tabIndex = 0;
         row.setAttribute("role", "button");
         row.setAttribute("aria-label", `Open transaction details for ${item.item_normalized || item.item || "transaction"}`);
@@ -921,6 +954,7 @@ function updateWithdrawalsTab(filteredW) {
 // --- Charts Rendering (Chart.js) ---
 
 function updateCharts(filteredData) {
+    filteredData = getPostedTransactions(filteredData);
     const colors = getChartColors();
     
     // 1. Chart 1: Monthly Cash Flow (Income vs Expense)
@@ -1280,6 +1314,7 @@ function setupFilters() {
             activePlatformFilter = "all";
             activeTransactionPaymentFilter = "all";
             activeTransactionFlowFilter = "all";
+            activeTransactionStatusFilter = "posted";
             
             // Reset values visually
             monthSelects.forEach(s => s.value = "all");
@@ -1292,6 +1327,9 @@ function setupFilters() {
             });
             document.querySelectorAll("[data-transaction-flow]").forEach(chip => {
                 chip.classList.toggle("active", chip.dataset.transactionFlow === "all");
+            });
+            document.querySelectorAll("[data-transaction-status]").forEach(chip => {
+                chip.classList.toggle("active", chip.dataset.transactionStatus === "posted");
             });
             
             // Reset sort headers
@@ -1359,6 +1397,16 @@ function setupTransactionWorkspace() {
         chip.addEventListener("click", () => {
             activeTransactionFlowFilter = chip.dataset.transactionFlow || "all";
             document.querySelectorAll("[data-transaction-flow]").forEach(item => {
+                item.classList.toggle("active", item === chip);
+            });
+            updateLedgerTable(getFilteredData());
+        });
+    });
+
+    document.querySelectorAll("[data-transaction-status]").forEach(chip => {
+        chip.addEventListener("click", () => {
+            activeTransactionStatusFilter = chip.dataset.transactionStatus || "posted";
+            document.querySelectorAll("[data-transaction-status]").forEach(item => {
                 item.classList.toggle("active", item === chip);
             });
             updateLedgerTable(getFilteredData());
@@ -1732,10 +1780,12 @@ function getReconciliationPreview() {
 
     const reconciliationStart = window.BUDGET_CONFIG?.ccKuReconciliationStart || "2026-05-16";
     const pendingBills = cashData.reduce((sum, item) => {
+        const itemDate = String(item.tanggal || "").slice(0, 10);
         const isPendingCard =
             item.payment_type === "cashless" &&
             String(item.note || "").includes("CC KU") &&
-            String(item.tanggal || "") >= reconciliationStart;
+            itemDate >= reconciliationStart &&
+            itemDate <= todayTokyoDateString();
         return sum + (isPendingCard ? (Number(item.pengeluaran) || 0) : 0);
     }, 0);
 
@@ -3192,6 +3242,7 @@ function updateTopedCardView(selectedPayDate) {
 
 // --- Income Analyzer View Rendering ---
 function updateIncomePage(filteredData) {
+    filteredData = getPostedTransactions(filteredData);
     const tableBody = document.getElementById("income-table-body");
     const countEl = document.getElementById("income-count");
     const kpiTotalEl = document.getElementById("kpi-income-total");
@@ -3397,6 +3448,7 @@ function renderIncomeCategoryChart(filteredData, colors) {
 
 // --- Expense Analyzer View Rendering ---
 function updateExpensePage(filteredData) {
+    filteredData = getPostedTransactions(filteredData);
     const tableBody = document.getElementById("expense-table-body");
     const countEl = document.getElementById("expense-count");
     const kpiTotalEl = document.getElementById("kpi-expense-total");
@@ -3618,6 +3670,7 @@ function renderExpenseCategoryChart(filteredData, colors) {
 
 // --- Rent & Utilities Pages Logic ---
 function updateUtilityPages(filteredData) {
+    filteredData = getPostedTransactions(filteredData);
     updateSingleUtilityPage(filteredData, "rent", "Apartment Rent", "#6366f1");
     updateSingleUtilityPage(filteredData, "gas", "Gas Bill", "#ef4444");
     updateSingleUtilityPage(filteredData, "electricity", "Electricity Bill", "#f59e0b");
