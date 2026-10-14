@@ -1419,6 +1419,7 @@ function setupTransactionWorkspace() {
     window.FinanceVisaReview?.init();
     window.FinanceTokopediaProof?.init();
     window.FinanceFlowAudit?.init();
+    window.FinanceTransferProof?.init();
 
     window.addEventListener("budget:data-tools-error", event => {
         showToast(event.detail?.message || "Data export failed.", "error");
@@ -1696,6 +1697,10 @@ async function fetchAndInitData() {
         });
         window.FinanceIntegrity?.setData({ cash: cashData });
         window.FinanceFlowAudit?.setData({ cash: cashData });
+        window.FinanceTransferProof?.setData({
+          cash: cashData, bni: bniData, muamalat: muamalatData,
+          gopay: gopayData, tokopediaEvidence: payload.tokopediaEvidence
+        });
         window.FinanceAccountEvidence?.setData({
             cash: cashData,
             withdrawals: withdrawalsData,
@@ -1784,6 +1789,9 @@ function initNavigation() {
                 } else if (targetViewId === "view-flow-audit") {
                     topBarTitle.textContent = "Spending vs Money Movement";
                     topBarDesc.textContent = "Separate consumption from transfers, card settlements, lending and adjustments";
+                } else if (targetViewId === "view-transfer-proof") {
+                    topBarTitle.textContent = "Transfer Verification";
+                    topBarDesc.textContent = "Match bank statement entries without assuming purpose or account ownership";
                 } else if (targetViewId === "view-transactions") {
                     topBarTitle.textContent = "Transactions";
                     topBarDesc.textContent = "Search, filter, and inspect your complete ledger";
@@ -1879,6 +1887,8 @@ function initNavigation() {
                 window.FinanceIntegrity?.render();
             } else if (targetViewId === "view-flow-audit") {
                 window.FinanceFlowAudit?.render();
+            } else if (targetViewId === "view-transfer-proof") {
+                window.FinanceTransferProof?.render();
             } else if (targetViewId === "view-visa-review") {
                 window.FinanceVisaReview?.render();
             } else if (targetViewId === "view-tokopedia-proof") {
