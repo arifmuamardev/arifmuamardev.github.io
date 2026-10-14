@@ -54,6 +54,9 @@
   }
 
   function isExpense(item) {
+    const classifier=typeof window!=="undefined" ? window.FinanceFlowClassifier :
+      (typeof require!=="undefined" ? require("./flow-classifier.js") : null);
+    if(classifier)return amount(item?.pengeluaran)>0 && classifier.classify(item).kind==="spending";
     return amount(item?.pengeluaran) > 0 &&
       !EXCLUDED_ITEMS.has(String(item?.item_normalized || item?.item || ""));
   }

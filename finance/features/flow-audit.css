@@ -1,0 +1,21 @@
+.flow-audit-workspace{display:flex;flex-direction:column;gap:1rem}
+.flow-audit-head,.flow-audit-panel{padding:1.1rem}
+.flow-audit-head h2{font:700 1.3rem 'Outfit',sans-serif;color:var(--text-primary);margin:.25rem 0}
+.flow-audit-head p,.flow-audit-muted{color:var(--text-muted);font-size:.72rem;line-height:1.65}
+.flow-audit-buttons{display:flex;gap:.5rem;margin-top:.7rem;flex-wrap:wrap}
+.flow-audit-buttons button{background:transparent;color:var(--text-primary);border:1px solid var(--border-card);border-radius:8px;padding:.5rem .75rem;font-size:.7rem;cursor:pointer}
+.flow-audit-buttons button.active{background:rgba(148,163,184,.12);border-color:var(--color-primary)}
+.flow-audit-cards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.75rem}
+.flow-audit-card{padding:1rem;min-width:0}
+.flow-audit-card span{font-size:.69rem;color:var(--text-muted);display:block}
+.flow-audit-card strong{display:block;font:700 1.23rem 'Outfit',sans-serif;color:var(--text-primary);margin:.35rem 0;overflow-wrap:anywhere}
+.flow-audit-card small{font-size:.64rem;color:var(--text-muted);line-height:1.5}
+.flow-audit-check{padding:1rem;font-size:.74rem;color:var(--text-primary);border-left:3px solid var(--color-income)}
+.flow-audit-panel h3{font:700 1rem 'Outfit',sans-serif;color:var(--text-primary);margin:.1rem 0 .5rem}
+.flow-audit-entry{display:flex;justify-content:space-between;gap:1rem;align-items:center;width:100%;padding:.75rem;border-radius:9px;background:transparent;border:1px solid var(--border-card);color:var(--text-primary);cursor:pointer;text-align:left;margin-bottom:.45rem;font-size:.71rem}
+.flow-audit-entry span:first-child{min-width:0}
+.flow-audit-entry strong,.flow-audit-entry small{display:block}
+.flow-audit-entry small{font-size:.65rem;color:var(--text-muted);margin-top:.3rem;line-height:1.55}
+.flow-audit-entry:hover{background:rgba(148,163,184,.07)}
+@media(max-width:750px){.flow-audit-cards{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:490px){.flow-audit-cards{grid-template-columns:1fr}}

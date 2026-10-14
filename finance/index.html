@@ -28,18 +28,21 @@
     <link rel="stylesheet" href="features/account-evidence.css?v=5.3.0">
     <link rel="stylesheet" href="features/visa-review.css?v=5.4.0">
     <link rel="stylesheet" href="features/tokopedia-proof.css?v=5.5.0">
+    <link rel="stylesheet" href="features/flow-audit.css?v=5.7.0">
     <script src="features/category-standards.js?v=5.6.0" defer></script>
     <script src="features/transaction-editor.js?v=5.6.0" defer></script>
     <script src="features/transaction-history.js?v=4.5.0" defer></script>
     <script src="features/data-tools.js?v=4.7.0" defer></script>
-    <script src="features/monthly-budget.js?v=4.8.0" defer></script>
-    <script src="features/monthly-review.js?v=4.9.0" defer></script>
-    <script src="features/forecast.js?v=5.1.0" defer></script>
+    <script src="features/monthly-budget.js?v=5.7.0" defer></script>
+    <script src="features/monthly-review.js?v=5.7.0" defer></script>
+    <script src="features/flow-classifier.js?v=5.7.0" defer></script>
+    <script src="features/flow-audit.js?v=5.7.0" defer></script>
+    <script src="features/forecast.js?v=5.7.0" defer></script>
     <script src="features/data-integrity.js?v=5.2.0" defer></script>
     <script src="features/account-evidence.js?v=5.3.0" defer></script>
     <script src="features/visa-review.js?v=5.4.0" defer></script>
     <script src="features/tokopedia-proof.js?v=5.5.0" defer></script>
-    <script src="app.js?v=5.5.0" defer></script>
+    <script src="app.js?v=5.7.0" defer></script>
 </head>
 <body class="dark-theme">
     <div id="auth-gate" class="auth-gate" aria-live="polite">
@@ -140,6 +143,7 @@
                     <button class="nav-btn" data-target="view-expense"><i class="fa-solid fa-arrow-trend-down"></i><span>Expenses</span></button>
                     <button class="nav-btn" data-target="view-reconciliation"><i class="fa-solid fa-scale-balanced"></i><span>Reconciliation</span></button>
                     <button class="nav-btn" data-target="view-account-evidence"><i class="fa-solid fa-building-columns"></i><span>Account Evidence</span></button>
+                    <button class="nav-btn" data-target="view-flow-audit"><i class="fa-solid fa-arrows-left-right-to-line"></i><span>Spending vs Transfers</span></button>
                 </div>
 
                 <details class="sidebar-disclosure">
@@ -222,7 +226,7 @@
                         <div class="home-hero-copy">
                             <span class="home-eyebrow" id="home-period-label">This month</span>
                             <h1 id="home-greeting">Your money at a glance</h1>
-                            <p>Start here for the numbers and signals that matter now. Historical detail stays available below.</p>
+                            <p>Monthly spending now separates purchases from account transfers, card repayments, loans and balance adjustments. The recorded balance is a ledger snapshot, not verified combined net worth.</p>
                         </div>
                         <div class="home-balance-block">
                             <span class="home-balance-label">Recorded balance</span>
@@ -632,6 +636,42 @@
                         </section>
                     </div>
                 </section>
+            </div>
+
+            <div id="view-flow-audit" class="dashboard-view hidden">
+              <section class="flow-audit-workspace">
+                <div class="flow-audit-head glass-panel">
+                  <span class="home-section-kicker">Read-only · source-aware financial meaning</span>
+                  <h2>Actual spending vs money movement</h2>
+                  <p>Classify recorded JPY-equivalent ledger flows without rewriting them. Card repayments are not a second purchase; money transfers are not automatically consumption. Transfers to other people may still be payments and require review. Balances are account-scoped snapshots, not proof of net worth.</p>
+                  <div class="flow-audit-buttons" role="group" aria-label="Analysis time period">
+                    <button type="button" class="active" data-flow-audit-period="month">Current month</button>
+                    <button type="button" data-flow-audit-period="all">All history</button>
+                  </div>
+                  <p class="flow-audit-muted" id="flow-audit-source">Loading source ledger…</p>
+                </div>
+                <div class="flow-audit-cards">
+                  <article class="flow-audit-card glass-panel"><span>Raw recorded outflows</span><strong id="flow-audit-raw">—</strong><small>All signed ledger expenses, not a consumption metric</small></article>
+                  <article class="flow-audit-card glass-panel"><span>Classified net spending</span><strong id="flow-audit-consumption">—</strong><small>Purchase/service amounts after recorded credits</small></article>
+                  <article class="flow-audit-card glass-panel"><span>Transfers / movements</span><strong id="flow-audit-movement">—</strong><small>Outgoing, destinations not all verified</small></article>
+                  <article class="flow-audit-card glass-panel"><span>Card settlements</span><strong id="flow-audit-repayment">—</strong><small>Not an additional purchase</small></article>
+                  <article class="flow-audit-card glass-panel"><span>Loans & advances</span><strong id="flow-audit-lending">—</strong><small>Principal movement, not personal consumption</small></article>
+                  <article class="flow-audit-card glass-panel"><span>Reconciliation adjustments</span><strong id="flow-audit-adjustments">—</strong><small>Bookkeeping, not goods or services</small></article>
+                  <article class="flow-audit-card glass-panel"><span>Unclassified outflows</span><strong id="flow-audit-uncertain">—</strong><small>Hold separately until confirmed</small></article>
+                  <article class="flow-audit-card glass-panel"><span>Classified income</span><strong id="flow-audit-income">—</strong><small>Excludes internal transfers, loans, and adjustments</small></article>
+                  <article class="flow-audit-card glass-panel"><span>Incoming movements</span><strong id="flow-audit-incoming-moves">—</strong><small>Not new earnings</small></article>
+                </div>
+                <div id="flow-audit-check" class="flow-audit-check glass-panel">Checking ledger allocations…</div>
+                <section class="flow-audit-panel glass-panel">
+                  <h3>Transfers and unknown transactions requiring review (<span id="flow-audit-reviewed">—</span>)</h3>
+                  <p class="flow-audit-muted">Items in this list may involve recipient payments or unrecognized merchants. They are separated provisionally, not proven to be internal transfers. Click to inspect transaction evidence.</p>
+                  <div id="flow-audit-review-list"></div>
+                </section>
+                <div class="flow-audit-panel glass-panel">
+                  <h3>Interpretation</h3>
+                  <p class="flow-audit-muted">All amounts are stored JPY equivalents. IDR-origin records use historical saved conversion, not current FX. Negative purchase entries reduce classified spending. Raw outflows include bank transfers and adjustments. The classification is advisory and leaves account balances untouched. Some existing Analytics, Expenses, and bank checkpoint views still show raw ledger flows; compare like-for-like metrics.</p>
+                </div>
+              </section>
             </div>
 
             <div id="view-integrity" class="dashboard-view hidden">
