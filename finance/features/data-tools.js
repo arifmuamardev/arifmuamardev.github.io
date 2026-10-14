@@ -68,6 +68,12 @@
       item?.payment_type === "cash" &&
       item?.saldo === null
     );
+    const foreignCashBalanceGaps = cashBalanceGaps.filter(item =>
+      /\bRp\b/i.test(String(item?.note || ""))
+    );
+    const unexplainedCashBalanceGaps = cashBalanceGaps.filter(item =>
+      !/\bRp\b/i.test(String(item?.note || ""))
+    );
 
     const othersRows = cash.filter(item =>
       String(item?.kategori_normalized || item?.kategori || "").trim().toLowerCase() === "others"
@@ -94,6 +100,8 @@
       possibleDuplicateRows,
       missingEssentials,
       cashBalanceGaps,
+      foreignCashBalanceGaps,
+      unexplainedCashBalanceGaps,
       othersRows,
       latestPosted,
       earliestPosted,
@@ -121,12 +129,14 @@
           : "All ledger rows have the essential fields used by this dashboard."
       },
       {
-        tone: a.cashBalanceGaps.length ? "warning" : "good",
-        icon: a.cashBalanceGaps.length ? "fa-scale-unbalanced-flip" : "fa-circle-check",
-        title: "Cash balance continuity",
-        detail: a.cashBalanceGaps.length
-          ? `${a.cashBalanceGaps.length} cash row(s) have no running balance.`
-          : "Cash rows have running-balance values."
+        tone: a.unexplainedCashBalanceGaps.length ? "warning" : a.foreignCashBalanceGaps.length ? "info" : "good",
+        icon: a.unexplainedCashBalanceGaps.length ? "fa-scale-unbalanced-flip" : a.foreignCashBalanceGaps.length ? "fa-earth-asia" : "fa-circle-check",
+        title: "Cash rows without JPY running balance",
+        detail: a.unexplainedCashBalanceGaps.length
+          ? `${a.unexplainedCashBalanceGaps.length} row(s) need review; ${a.foreignCashBalanceGaps.length} additional row(s) are recognized as Rupiah cash records.`
+          : a.foreignCashBalanceGaps.length
+            ? `${a.foreignCashBalanceGaps.length} row(s) are legacy Rupiah cash transactions and intentionally have no JPY running balance.`
+            : "Cash rows that participate in the JPY wallet ledger have running-balance values."
       },
       {
         tone: a.duplicateGroups.length ? "review" : "good",
@@ -197,7 +207,8 @@
 
   function safeCsvCell(value) {
     let text = value === null || value === undefined ? "" : String(value);
-    if (/^[=+\-@]/.test(text)) text = "'" + text;
+    const isPlainNumber = /^-?\d+(?:\.\d+)?$/.test(text.trim());
+    if (!isPlainNumber && /^[=+\-@]/.test(text)) text = "'" + text;
     return '"' + text.replaceAll('"', '""') + '"';
   }
 
