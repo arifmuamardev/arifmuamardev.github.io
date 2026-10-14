@@ -15,25 +15,50 @@
   function matchLines(statement, cash, taken) {
     const lines = Array.isArray(statement?.payload?.lines) ? statement.payload.lines : [];
     const ledger = Array.isArray(cash) ? cash : [];
-    const results = [];
-    for (const line of lines) {
-      // A transaction can support only ONE statement line, even if two card
-      // purchases had the same day and amount (e.g. separate ICOCA top-ups).
+    const results = lines.map(line => ({ ...line, status: "unmatched", ledgerId: null }));
+
+    // Exact date / amount candidates are considered before shifted posting dates.
+    for (const result of results) {
       const options = ledger.filter(row => !taken.has(String(row.id)) &&
-        date(row.tanggal) === date(line.transaction_date) &&
-        moneyEq(row.pengeluaran, line.amount_jpy) && num(row.pengeluaran) > 0);
-      options.sort((a, b) => {
-        const creditTagged = x => note(x).includes("CC KU") ? 0 : 1;
-        return creditTagged(a) - creditTagged(b) ||
-          Number(a.id || 0) - Number(b.id || 0);
-      });
+        date(row.tanggal) === date(result.transaction_date) &&
+        moneyEq(row.pengeluaran, result.amount_jpy) && num(row.pengeluaran) > 0);
+      options.sort((a, b) =>
+        (note(a).includes("CC KU") ? 0 : 1) - (note(b).includes("CC KU") ? 0 : 1) ||
+        Number(a.id || 0) - Number(b.id || 0));
+      if (!options.length) continue;
       const choice = options[0];
-      let status = "unmatched";
-      if (choice) {
-        taken.add(String(choice.id));
-        status = note(choice).includes("CC KU") ? "cc_candidate" : "amount_candidate";
-      }
-      results.push({ ...line, status, ledgerId: choice ? Number(choice.id) : null });
+      taken.add(String(choice.id));
+      result.ledgerId = Number(choice.id);
+      result.status = note(choice).includes("CC KU") ? "cc_candidate" : "amount_candidate";
+    }
+
+    // If the bank posted the same merchant one day later, retain a separate
+    // review status. Require a credit-card marker AND meaningful merchant match.
+    const normalize = x => String(x || "").normalize("NFKC").toUpperCase()
+      .replace(/[^A-Z0-9\u3040-\u30FF\u3400-\u9FFF]/g, "");
+    const dayGap = (a, b) => {
+      const x = Date.parse(date(a) + "T00:00:00Z");
+      const y = Date.parse(date(b) + "T00:00:00Z");
+      return Number.isFinite(x) && Number.isFinite(y) ? Math.abs(x - y) / 86400000 : Infinity;
+    };
+    for (const result of results.filter(x => x.status === "unmatched")) {
+      const merchant = normalize(result.merchant);
+      if (merchant.length < 4) continue;
+      const options = ledger.filter(row => !taken.has(String(row.id)) &&
+        note(row).includes("CC KU") &&
+        num(row.pengeluaran) > 0 && moneyEq(row.pengeluaran, result.amount_jpy) &&
+        dayGap(row.tanggal, result.transaction_date) === 1 &&
+        [row.tempat, row.item, row.item_normalized].some(label => {
+          const merchantInLedger = normalize(label);
+          return merchantInLedger.length >= 4 &&
+            (merchantInLedger.includes(merchant) || merchant.includes(merchantInLedger));
+        }));
+      options.sort((a, b) => Number(a.id || 0) - Number(b.id || 0));
+      if (!options.length) continue;
+      const choice = options[0];
+      taken.add(String(choice.id));
+      result.ledgerId = Number(choice.id);
+      result.status = "date_shift_candidate";
     }
     return results;
   }
@@ -68,11 +93,13 @@
       asOf: date(creditData.as_of),
       counts: {
         total: lines.length, ccCandidates: count("cc_candidate"),
+        shiftedCandidates: count("date_shift_candidate"),
         amountCandidates: count("amount_candidate"), unmatched: count("unmatched")
       },
       totals: {
         pdf: novTotal, sum: total,
-        ccCandidates: sum("cc_candidate"), amountCandidates: sum("amount_candidate"),
+        ccCandidates: sum("cc_candidate"), shiftedCandidates: sum("date_shift_candidate"),
+        amountCandidates: sum("amount_candidate"),
         unmatched: sum("unmatched")
       },
       checks: {
@@ -105,6 +132,7 @@
   }
   function statusName(kind) {
     return kind === "cc_candidate" ? "CC KU candidate" :
+      kind === "date_shift_candidate" ? "1-day merchant match" :
       kind === "amount_candidate" ? "Date / amount only" : "Not found in ledger";
   }
 
@@ -160,6 +188,8 @@
     put("visa-nov-count", m.counts.total);
     put("visa-candidate-count", m.counts.ccCandidates);
     put("visa-candidate-sum", yen(m.totals.ccCandidates));
+    put("visa-shift-candidate-count", m.counts.shiftedCandidates);
+    put("visa-shift-candidate-sum", yen(m.totals.shiftedCandidates));
     put("visa-amount-candidate-count", m.counts.amountCandidates);
     put("visa-amount-candidate-sum", yen(m.totals.amountCandidates));
     put("visa-unmatched-count", m.counts.unmatched);
@@ -183,7 +213,7 @@
       }
     }
     const warn = document.getElementById("visa-matching-warning");
-    if (warn) warn.textContent = m.counts.unmatched + " statement line(s) not yet present as exact date/amount records in the cash ledger. " +
+    if (warn) warn.textContent = m.counts.unmatched + " statement line(s) have no supported ledger match. " +
       "Date-and-amount matches are candidates, not merchant-verified matches. " +
       "The " + yen(m.outstandingVsBill) + " difference between card outstanding and the provisional bill is not explained by the supplied sources; do not create a balancing transaction.";
     renderLines(m.lines);

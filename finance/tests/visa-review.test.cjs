@@ -87,3 +87,19 @@ test("no identical ledger row may satisfy October and November sources twice",()
  assert.equal(m.counts.ccCandidates,1);
  assert.equal(m.octLines[0].status,"unmatched");
 });
+
+test("one-day date shift requires a marked card purchase and matched merchant", () => {
+  const x=fixture();
+  x[0].payload.total_jpy=500;
+  x[0].payload.lines=[{line_no:1,transaction_date:"2026-09-28",merchant:"AMAZON.CO.JP",amount_jpy:500}];
+  const m=snapshotForTest(x,[{id:31,tanggal:"2026-09-27",pengeluaran:500,note:"CC KU",tempat:"Amazon.co.jp"}]);
+  assert.equal(m.counts.shiftedCandidates,1);
+  assert.equal(m.counts.unmatched,0);
+});
+test("amount alone with one-day date shift cannot make a match", () => {
+  const x=fixture();
+  x[0].payload.total_jpy=500;
+  x[0].payload.lines=[{line_no:1,transaction_date:"2026-09-28",merchant:"AMAZON.CO.JP",amount_jpy:500}];
+  const m=snapshotForTest(x,[{id:31,tanggal:"2026-09-27",pengeluaran:500,note:"CC KU",tempat:"Unrelated shop"}]);
+  assert.equal(m.counts.unmatched,1);
+});

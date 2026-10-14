@@ -2307,7 +2307,7 @@ function getCCKuPaymentDetails(dateStr, kategoriNormalized) {
 }
 
 function initCCKuTracker() {
-    const ccKuTrans = cashData.filter(item => item.payment_type === 'cashless' && item.note === 'CC KU');
+    const ccKuTrans = cashData.filter(item => item.payment_type === 'cashless' && String(item.note || '').includes('CC KU'));
     
     ccKuGrouped = {};
     ccKuTrans.forEach(item => {
@@ -2348,7 +2348,7 @@ function initCCKuTracker() {
         if (pd > todayStr) {
             statusLabel = " (Next Bill)";
         } else {
-            statusLabel = " (Paid)";
+            statusLabel = " (Past cycle · unverified)";
         }
         
         const groupInfo = ccKuGrouped[pd];
@@ -2439,10 +2439,10 @@ function updateCCKuView(selectedPayDate) {
                 statusClass = "badge-status-outstanding";
                 statusIcon = '<i class="fa-solid fa-clock"></i>';
             } else {
-                statusText = "Paid & Cleared";
-                statusSub = "Auto-debited from bank";
-                statusClass = "badge-status-paid";
-                statusIcon = '<i class="fa-solid fa-circle-check"></i>';
+                statusText = "Past cycle";
+                statusSub = "Payment is not inferred from due date. Check VISA Proof.";
+                statusClass = "badge-status-future";
+                statusIcon = '<i class="fa-solid fa-circle-info"></i>';
             }
         }
     }
