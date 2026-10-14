@@ -1,0 +1,25 @@
+name: Finance Forecast regression tests
+
+on:
+  push:
+    paths:
+      - "finance/**"
+      - ".github/workflows/finance-forecast-tests.yml"
+  pull_request:
+    paths:
+      - "finance/**"
+      - ".github/workflows/finance-forecast-tests.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  forecast-regression:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Run read-only Forecast regression tests
+        run: node --test finance/tests/forecast.test.cjs
