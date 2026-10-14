@@ -1,0 +1,42 @@
+/* Account evidence: source-specific, observation-only review */
+.account-evidence-workspace { display:flex; flex-direction:column; gap:1rem; }
+.account-evidence-hero { padding:1.15rem; }
+.account-evidence-hero h2 { margin:.3rem 0; font:700 1.3rem 'Outfit',sans-serif; color:var(--text-primary); }
+.account-evidence-hero p { color:var(--text-muted); font-size:.77rem; line-height:1.65; max-width:850px; margin:.4rem 0 0; }
+.account-evidence-kpis { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:.75rem; }
+.account-evidence-kpi { min-width:0; padding:1rem; }
+.account-evidence-kpi > span { display:block; color:var(--text-muted); font-size:.68rem; }
+.account-evidence-kpi > strong { display:block; color:var(--text-primary); font:700 1.18rem 'Outfit',sans-serif; margin:.3rem 0; overflow-wrap:anywhere; }
+.account-evidence-kpi small { display:block; font-size:.63rem; color:var(--text-muted); line-height:1.5; }
+.account-evidence-section { padding:1rem; }
+.account-evidence-section h3 { font:700 1rem 'Outfit',sans-serif; color:var(--text-primary); margin:0 0 .35rem; }
+.account-evidence-section > p { color:var(--text-muted); font-size:.7rem; line-height:1.6; margin:.15rem 0 .9rem; }
+.account-evidence-accounts { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:.8rem; }
+.account-evidence-card { padding:1rem; min-width:0; }
+.account-evidence-card h3 { margin:.3rem 0 .5rem; color:var(--text-primary); font:700 1rem 'Outfit',sans-serif; }
+.account-evidence-kicker { color:var(--text-muted); font-size:.62rem; letter-spacing:.06em; }
+.account-evidence-amount { display:block; color:var(--text-primary); font:700 1.15rem 'Outfit',sans-serif; overflow-wrap:anywhere; }
+.account-evidence-muted { color:var(--text-muted); font-size:.68rem; line-height:1.55; margin:.3rem 0; }
+.account-evidence-link { display:block; border:1px solid var(--border-card); border-radius:8px; background:transparent; color:var(--text-primary); padding:.5rem .65rem; text-align:left; margin:.5rem 0 0; font-size:.68rem; cursor:pointer; width:100%; }
+.account-evidence-link:hover { background:rgba(148,163,184,.08); border-color:var(--border-card-hover); }
+.account-evidence-manual-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:.65rem; }
+.account-evidence-manual { border:1px solid var(--border-card); padding:.7rem; border-radius:10px; }
+.account-evidence-manual strong { display:block; font-size:.74rem; color:var(--text-primary); }
+.account-evidence-manual span { display:block; font-size:.66rem; color:var(--text-muted); margin-top:.4rem; line-height:1.55; }
+.account-evidence-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:1rem; }
+.account-evidence-difference-heading { color:var(--text-primary); font-size:.72rem; font-weight:700; margin:.6rem 0 .3rem; }
+.account-evidence-difference { font-variant-numeric:tabular-nums; overflow-wrap:anywhere; }
+.account-evidence-event { display:flex; align-items:center; justify-content:space-between; gap:1rem; width:100%; border:1px solid var(--border-card); background:transparent; color:var(--text-primary); padding:.65rem; border-radius:9px; margin:.4rem 0; cursor:pointer; text-align:left; }
+.account-evidence-event:hover { background:rgba(148,163,184,.07); }
+.account-evidence-event > span { min-width:0; }
+.account-evidence-event strong, .account-evidence-event small { display:block; }
+.account-evidence-event strong { font-size:.7rem; }
+.account-evidence-event small { font-size:.62rem; color:var(--text-muted); margin-top:.25rem; }
+.account-evidence-event b { flex-shrink:0; font-size:.68rem; }
+.account-evidence-atm-row { display:flex; flex-direction:column; padding:.55rem 0; border-bottom:1px solid var(--border-card); gap:.3rem; }
+.account-evidence-atm-row strong { font-size:.69rem; color:var(--text-primary); }
+.account-evidence-atm-row span { color:var(--text-muted); font-size:.66rem; }
+.account-evidence-warning { border-left:3px solid #f59e0b; padding:.85rem 1rem; font-size:.7rem; line-height:1.65; color:var(--text-primary); }
+@media(max-width:950px) { .account-evidence-accounts { grid-template-columns:1fr; } .account-evidence-grid {grid-template-columns:1fr;} }
+@media(max-width:650px) { .account-evidence-kpis {grid-template-columns:repeat(2,minmax(0,1fr));} .account-evidence-manual-grid {grid-template-columns:1fr;} }
+@media(max-width:420px) { .account-evidence-kpis {grid-template-columns:1fr;} }

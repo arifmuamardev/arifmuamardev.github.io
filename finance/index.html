@@ -25,6 +25,7 @@
     <link rel="stylesheet" href="features/monthly-review.css?v=4.9.0">
     <link rel="stylesheet" href="features/forecast.css?v=5.0.0">
     <link rel="stylesheet" href="features/data-integrity.css?v=5.2.0">
+    <link rel="stylesheet" href="features/account-evidence.css?v=5.3.0">
     <script src="features/transaction-editor.js?v=4.7.0" defer></script>
     <script src="features/transaction-history.js?v=4.5.0" defer></script>
     <script src="features/data-tools.js?v=4.7.0" defer></script>
@@ -32,7 +33,8 @@
     <script src="features/monthly-review.js?v=4.9.0" defer></script>
     <script src="features/forecast.js?v=5.1.0" defer></script>
     <script src="features/data-integrity.js?v=5.2.0" defer></script>
-    <script src="app.js?v=5.2.0" defer></script>
+    <script src="features/account-evidence.js?v=5.3.0" defer></script>
+    <script src="app.js?v=5.3.0" defer></script>
 </head>
 <body class="dark-theme">
     <div id="auth-gate" class="auth-gate" aria-live="polite">
@@ -132,6 +134,7 @@
                     <button class="nav-btn" data-target="view-income"><i class="fa-solid fa-arrow-trend-up"></i><span>Income</span></button>
                     <button class="nav-btn" data-target="view-expense"><i class="fa-solid fa-arrow-trend-down"></i><span>Expenses</span></button>
                     <button class="nav-btn" data-target="view-reconciliation"><i class="fa-solid fa-scale-balanced"></i><span>Reconciliation</span></button>
+                    <button class="nav-btn" data-target="view-account-evidence"><i class="fa-solid fa-building-columns"></i><span>Account Evidence</span></button>
                 </div>
 
                 <details class="sidebar-disclosure">
@@ -2031,6 +2034,60 @@
                 </section>
             </div>
 
+            <div id="view-account-evidence" class="dashboard-view hidden">
+                <section class="account-evidence-workspace">
+                    <div class="account-evidence-hero glass-panel">
+                        <span class="home-section-kicker">Account-level investigation · read-only</span>
+                        <h2>Account Evidence & Transfer Review</h2>
+                        <p>View each account's last recorded statement snapshot separately. Indonesian bank and wallet balances are denominated in IDR; their stored JPY equivalents are informational and must not be added to the Japanese cash ledger. Nothing on this page adjusts a balance.</p>
+                    </div>
+                    <div class="account-evidence-kpis" aria-label="Account evidence summary">
+                        <article class="account-evidence-kpi glass-panel"><span>Latest JPY ledger balance</span><strong id="account-evidence-jpy-balance">—</strong><small id="account-evidence-jpy-meta">Not a per-bank balance</small></article>
+                        <article class="account-evidence-kpi glass-panel"><span>Indonesian statements</span><strong id="account-evidence-idr-accounts">—</strong><small id="account-evidence-idr-meta">Separate IDR accounts</small></article>
+                        <article class="account-evidence-kpi glass-panel"><span>IDR balance differences</span><strong id="account-evidence-bank-checks">—</strong><small id="account-evidence-bank-meta">Investigate, not errors proved</small></article>
+                        <article class="account-evidence-kpi glass-panel"><span>ATM activity</span><strong id="account-evidence-atm">—</strong><small id="account-evidence-atm-meta">Movement records, not balance</small></article>
+                        <article class="account-evidence-kpi glass-panel"><span>JPY transfer-related markers</span><strong id="account-evidence-movement-total">—</strong><small id="account-evidence-movement-note">Not paired to accounts</small></article>
+                    </div>
+                    <div class="account-evidence-warning glass-panel">
+                        <strong>Do not add these balances together.</strong> The JPY ledger balance may already reflect money movements involving the Indonesian accounts, ATM withdrawals and card settlements. JP Post Bank, Hokuriku Bank, and physical cash do not have separately synchronized statement balances here. Recorded balances are historic snapshots, not real-time bank balances.
+                    </div>
+                    <section class="account-evidence-section glass-panel">
+                        <h3>Japan · requires manually verified balances</h3>
+                        <p>The existing Reconciliation form asks for all three accounts. No reliable account-by-account current balances are available from the linked transaction tables. Review actual account statements before recording any adjustment.</p>
+                        <div id="account-evidence-japan" class="account-evidence-manual-grid"></div>
+                        <button type="button" class="account-evidence-link" data-account-nav="view-reconciliation">Open manual Reconciliation (writes only after explicit confirmation) →</button>
+                    </section>
+                    <section class="account-evidence-section">
+                        <h3>Indonesia · independent account statements</h3>
+                        <p>Source IDR balances and stored approximate yen equivalents are shown as recorded at each statement's latest date. Recency differs by account; values are never treated as current or summed with the JPY ledger.</p>
+                        <div id="account-evidence-indonesia" class="account-evidence-accounts"></div>
+                    </section>
+                    <div class="account-evidence-grid">
+                        <section class="account-evidence-section glass-panel">
+                            <h3>Native IDR statement continuity</h3>
+                            <p>For each bank/wallet, compare the change between consecutive recorded balances against signed statement amounts, with Rp1 rounding tolerance. Gaps could reflect missing imports, duplicate ledger rows, reversed order, or genuine reporting differences.</p>
+                            <div id="account-evidence-differences"></div>
+                        </section>
+                        <section class="account-evidence-section glass-panel">
+                            <h3>JPY ledger movement markers</h3>
+                            <p>Entries labeled internal transfer, bank inflow, remittance, fees, or balance reconciliation. They are not automatically matched to ATM or IDR statements, and are not additional expenses merely because money moved.</p>
+                            <div id="account-evidence-movements"></div>
+                        </section>
+                        <section class="account-evidence-section glass-panel">
+                            <h3>ATM movement evidence</h3>
+                            <p id="account-evidence-atm-flow">Loading recorded deposits, withdrawals, and fees…</p>
+                            <div id="account-evidence-atm-list"></div>
+                            <button type="button" class="account-evidence-link" data-account-nav="view-withdrawals">Inspect ATM Activity →</button>
+                        </section>
+                        <aside class="account-evidence-section glass-panel">
+                            <h3>What this can and cannot establish</h3>
+                            <p>This view gives source-separated evidence and balance continuity checks. It does not connect Japan Post Bank or Hokuriku accounts to ledger rows, establish which ATM source funds which destination, convert current balances using live FX, or prove that missing statement lines are fraudulent. Compare records and receipts before making a manual reconciliation adjustment.</p>
+                            <p>All calculations run locally from existing authenticated data; no new Neon tables or API write operations are introduced.</p>
+                        </aside>
+                    </div>
+                </section>
+            </div>
+
             <!-- View 6: Balance Reconciliation -->
             <div id="view-reconciliation" class="dashboard-view hidden">
                 <section class="recon-workspace">
@@ -2038,7 +2095,7 @@
                         <div>
                             <span class="home-section-kicker">Balance safety check</span>
                             <h2>Reconcile recorded balance with actual funds</h2>
-                            <p>Enter what you can physically verify now. The dashboard will calculate the adjustment first; nothing is written until you explicitly confirm.</p>
+                            <p>Enter what you can physically verify now. The dashboard will calculate the adjustment first; nothing is written until you explicitly confirm. Before recording an adjustment, review Account Evidence: imported IDR statement balances must not be added to the three Japanese balances.</p>
                         </div>
                         <div class="recon-steps" aria-label="Reconciliation steps">
                             <span class="active"><b>1</b> Enter balances</span>
