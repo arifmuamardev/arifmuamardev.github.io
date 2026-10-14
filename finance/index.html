@@ -18,7 +18,7 @@
     <script src="config.js?v=4.0.1"></script>
     <script type="module" src="cloud.js?v=5.5.0"></script>
     <link rel="stylesheet" href="styles.css?v=4.9.1">
-    <link rel="stylesheet" href="features/transaction-editor.css?v=4.4.0">
+    <link rel="stylesheet" href="features/transaction-editor.css?v=5.6.0">
     <link rel="stylesheet" href="features/transaction-history.css?v=4.5.0">
     <link rel="stylesheet" href="features/data-tools.css?v=4.7.0">
     <link rel="stylesheet" href="features/monthly-budget.css?v=4.8.0">
@@ -28,7 +28,8 @@
     <link rel="stylesheet" href="features/account-evidence.css?v=5.3.0">
     <link rel="stylesheet" href="features/visa-review.css?v=5.4.0">
     <link rel="stylesheet" href="features/tokopedia-proof.css?v=5.5.0">
-    <script src="features/transaction-editor.js?v=4.7.0" defer></script>
+    <script src="features/category-standards.js?v=5.6.0" defer></script>
+    <script src="features/transaction-editor.js?v=5.6.0" defer></script>
     <script src="features/transaction-history.js?v=4.5.0" defer></script>
     <script src="features/data-tools.js?v=4.7.0" defer></script>
     <script src="features/monthly-budget.js?v=4.8.0" defer></script>
@@ -642,6 +643,7 @@
                     </div>
                     <div class="integrity-kpis">
                         <article class="integrity-kpi glass-panel"><span>Ledger records</span><strong id="integrity-total">—</strong><small id="integrity-split">Loading…</small></article>
+                        <article class="integrity-kpi glass-panel"><span>Others · needs classification</span><strong id="integrity-others">—</strong><small id="integrity-others-meta">Category review backlog</small></article>
                         <article class="integrity-kpi glass-panel"><span>Potential exact duplicates</span><strong id="integrity-duplicates">—</strong><small id="integrity-duplicates-meta">No records changed</small></article>
                         <article class="integrity-kpi glass-panel"><span>JPY balance differences</span><strong id="integrity-balance">—</strong><small id="integrity-balance-meta">Comparable recorded checkpoints</small></article>
                         <article class="integrity-kpi glass-panel"><span>IDR conversion exceptions</span><strong id="integrity-fx">—</strong><small id="integrity-fx-meta">Measured against historical stored pairs</small></article>
@@ -650,6 +652,11 @@
                     </div>
                     <div id="integrity-quality-note" class="integrity-note glass-panel hidden"></div>
                     <div class="integrity-panels">
+                        <section class="integrity-panel glass-panel">
+                            <h3>Unclassified transactions (Others)</h3>
+                            <p>Items lacking enough evidence for a more precise category. Click to open the transaction, review original description and receipts, then choose a category yourself. No automatic rewriting.</p>
+                            <div id="integrity-category-review-list" class="integrity-list"></div>
+                        </section>
                         <section class="integrity-panel glass-panel">
                             <h3>Balance checkpoints to review</h3>
                             <p>JPY-only posted records with recorded balances. We compare consecutive balance checkpoints with intervening JPY income and expenses. Account transfers and incomplete account scope can create legitimate differences. Largest gaps first.</p>

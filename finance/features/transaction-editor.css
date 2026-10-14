@@ -262,3 +262,7 @@
     grid-template-columns:1fr 1fr;
   }
 }
+.transaction-editor-category-suggestion { display:block; margin-top:.38rem; font-size:.67rem; color:var(--text-muted); line-height:1.5; }
+.transaction-editor-category-suggestion.hidden,.transaction-editor-apply-category.hidden {display:none}
+.transaction-editor-apply-category {margin-top:.38rem; padding:.32rem .55rem; font-size:.66rem; border-radius:7px; color:var(--text-primary); background:transparent; border:1px solid var(--border-card); cursor:pointer; text-align:left; width:max-content}
+.transaction-editor-apply-category:hover {border-color:var(--border-card-hover); background:rgba(148,163,184,.08)}

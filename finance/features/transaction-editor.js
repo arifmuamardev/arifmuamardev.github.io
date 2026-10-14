@@ -93,8 +93,10 @@
 
               <label class="transaction-editor-field">
                 <span>Category</span>
-                <input type="text" id="transaction-editor-category" list="transaction-editor-categories" maxlength="120" placeholder="Others">
+                <input type="text" id="transaction-editor-category" list="transaction-editor-categories" maxlength="120" placeholder="Choose a category (required)">
                 <datalist id="transaction-editor-categories"></datalist>
+                <span id="transaction-editor-category-suggestion" class="transaction-editor-category-suggestion hidden"></span>
+                <button type="button" id="transaction-editor-apply-category" class="transaction-editor-apply-category hidden">Use suggestion</button>
               </label>
 
               <label class="transaction-editor-field">
@@ -134,6 +136,18 @@
       if (event.target?.id === "transaction-editor-backdrop") close();
     });
     document.getElementById("transaction-editor-form")?.addEventListener("submit", submit);
+    ["transaction-editor-item","transaction-editor-store","transaction-editor-note",
+     "transaction-editor-flow","transaction-editor-category"].forEach(id => {
+      document.getElementById(id)?.addEventListener("input", updateCategorySuggestion);
+      document.getElementById(id)?.addEventListener("change", updateCategorySuggestion);
+    });
+    document.getElementById("transaction-editor-apply-category")?.addEventListener("click", () => {
+      const suggestion=readCategorySuggestion();
+      if (!suggestion) return;
+      const field=document.getElementById("transaction-editor-category");
+      if(field)field.value=suggestion.category;
+      updateCategorySuggestion();
+    });
     document.addEventListener("keydown", event => {
       if (event.key === "Escape" && isOpen()) close();
     });
@@ -149,6 +163,29 @@
     el.textContent = message;
     el.classList.toggle("hidden", !message);
     el.dataset.type = type;
+  }
+
+  function readCategorySuggestion() {
+    return window.FinanceCategoryStandards?.suggest({
+      item:document.getElementById("transaction-editor-item")?.value || "",
+      store:document.getElementById("transaction-editor-store")?.value || "",
+      flow:document.getElementById("transaction-editor-flow")?.value || "expense",
+      note:document.getElementById("transaction-editor-note")?.value || ""
+    }) || null;
+  }
+
+  function updateCategorySuggestion() {
+    const category=document.getElementById("transaction-editor-category")?.value?.trim() || "";
+    const suggestion=readCategorySuggestion();
+    const hint=document.getElementById("transaction-editor-category-suggestion");
+    const button=document.getElementById("transaction-editor-apply-category");
+    if(hint) {
+      hint.classList.toggle("hidden",!suggestion);
+      hint.textContent=suggestion
+        ? "Suggestion: "+suggestion.category+". "+suggestion.reason+" Confirm before saving."
+        : "";
+    }
+    if(button)button.classList.toggle("hidden", !suggestion || suggestion.category===category);
   }
 
   function setRows(rows = []) {
@@ -167,13 +204,14 @@
 
     state.latestCashId = latestCash ? Number(latestCash.id) : null;
 
-    const categories = [...new Set(
-      state.rows
+    const categories = [...new Set([
+      ...(window.FinanceCategoryStandards?.categories || []),
+      ...state.rows
         .map(item => item?.kategori_normalized || item?.kategori)
         .filter(Boolean)
         .map(value => String(value).trim())
         .filter(Boolean)
-    )].sort((a, b) => a.localeCompare(b));
+    ])].sort((a, b) => a.localeCompare(b));
 
     const list = document.getElementById("transaction-editor-categories");
     if (list) {
@@ -241,6 +279,7 @@
       : String(overrides.category || "");
     if (storeEl) storeEl.value = editing ? String(item.tempat || "") : "";
     if (noteEl) noteEl.value = editing ? String(item.note || "") : "";
+    updateCategorySuggestion();
 
     const olderCash = Boolean(
       editing &&
@@ -283,7 +322,7 @@
     const item = document.getElementById("transaction-editor-item")?.value?.trim();
     const amount = Number(document.getElementById("transaction-editor-amount")?.value);
     const paymentType = document.getElementById("transaction-editor-payment")?.value;
-    const category = document.getElementById("transaction-editor-category")?.value?.trim() || "Others";
+    const category = document.getElementById("transaction-editor-category")?.value?.trim() || "";
     const store = document.getElementById("transaction-editor-store")?.value?.trim() || "";
     const note = document.getElementById("transaction-editor-note")?.value?.trim() || "";
     const idRaw = document.getElementById("transaction-editor-id")?.value;
@@ -294,6 +333,10 @@
       return;
     }
 
+    if (!category) {
+      setMessage("Choose a category explicitly. Use a suggestion or select Others when the item truly cannot be identified.");
+      return;
+    }
     if (!["income", "expense", "refund"].includes(flow)) {
       setMessage("Choose a valid transaction flow.");
       return;
