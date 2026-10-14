@@ -1,0 +1,31 @@
+/* Bank-screenshot evidence workspace, responsive and read-only */
+.tokopedia-proof{display:flex;flex-direction:column;gap:1rem}
+.tokopedia-proof-head,.tokopedia-proof-panel{padding:1.1rem;min-width:0}
+.tokopedia-proof-head h2{font:700 1.35rem 'Outfit',sans-serif;color:var(--text-primary);margin:.3rem 0}
+.tokopedia-proof-head p,.tokopedia-proof-muted{font-size:.73rem;line-height:1.65;color:var(--text-muted)}
+.tokopedia-proof-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.75rem}
+.tokopedia-proof-kpi{min-width:0;padding:1rem}
+.tokopedia-proof-kpi span{font-size:.68rem;color:var(--text-muted);display:block}
+.tokopedia-proof-kpi strong{font:700 1.2rem 'Outfit',sans-serif;color:var(--text-primary);display:block;margin:.3rem 0;overflow-wrap:anywhere}
+.tokopedia-proof-kpi small{font-size:.64rem;color:var(--text-muted);line-height:1.5}
+.tokopedia-proof-meta{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1rem}
+.tokopedia-proof-panel h3{font:700 1rem 'Outfit',sans-serif;color:var(--text-primary);margin:0 0 .55rem}
+.tokopedia-proof-pair{display:flex;justify-content:space-between;gap:.8rem;border-bottom:1px solid var(--border-card);padding:.55rem 0;font-size:.72rem;color:var(--text-primary)}
+.tokopedia-proof-pair strong{white-space:nowrap;overflow-wrap:anywhere}
+.tokopedia-proof-warning{padding:.9rem 1rem;border-left:3px solid #e5a24b;color:var(--text-primary);font-size:.72rem;line-height:1.7}
+.tokopedia-proof-filters{display:flex;gap:.4rem;flex-wrap:wrap;margin:.5rem 0 .8rem}
+.tokopedia-proof-filters button{background:transparent;border:1px solid var(--border-card);padding:.45rem .65rem;color:var(--text-primary);font-size:.67rem;cursor:pointer;border-radius:8px}
+.tokopedia-proof-filters button.active{border-color:var(--color-primary);background:rgba(148,163,184,.13)}
+.tokopedia-proof-rows{display:flex;flex-direction:column;gap:.4rem}
+.tokopedia-proof-row{display:grid;grid-template-columns:minmax(100px,1fr) auto minmax(125px,auto) auto;align-items:center;gap:.6rem;border:1px solid var(--border-card);padding:.7rem;border-radius:10px;color:var(--text-primary)}
+.tokopedia-proof-row-main strong,.tokopedia-proof-row-main small{display:block}
+.tokopedia-proof-row-main strong{font-size:.75rem;overflow-wrap:anywhere}
+.tokopedia-proof-row-main small{font-size:.6rem;color:var(--text-muted);margin-top:.3rem}
+.tokopedia-proof-amount{font-size:.78rem}
+.tokopedia-proof-status{font-size:.64rem;color:var(--text-muted)}
+.tokopedia-proof-imported{color:var(--color-income)}
+.tokopedia-proof-pending{color:#e5a24b}
+.tokopedia-proof-detail{background:transparent;border:1px solid var(--border-card);border-radius:7px;padding:.4rem;color:var(--text-primary);font-size:.64rem;cursor:pointer}
+.tokopedia-proof-row-hint{grid-column:1 / -1;color:var(--text-muted);font-size:.63rem}
+@media(max-width:900px){.tokopedia-proof-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.tokopedia-proof-meta{grid-template-columns:1fr}.tokopedia-proof-row{grid-template-columns:1fr auto}.tokopedia-proof-row-hint{grid-column:1/-1}}
+@media(max-width:520px){.tokopedia-proof-grid{grid-template-columns:1fr}.tokopedia-proof-status{grid-column:1}.tokopedia-proof-detail{grid-column:2;grid-row:2}}

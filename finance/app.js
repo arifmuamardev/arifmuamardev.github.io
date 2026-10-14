@@ -1398,6 +1398,7 @@ function setupTransactionWorkspace() {
     window.FinanceIntegrity?.init();
     window.FinanceAccountEvidence?.init();
     window.FinanceVisaReview?.init();
+    window.FinanceTokopediaProof?.init();
 
     window.addEventListener("budget:data-tools-error", event => {
         showToast(event.detail?.message || "Data export failed.", "error");
@@ -1686,6 +1687,11 @@ async function fetchAndInitData() {
             evidence: payload.cardEvidence,
             loadError: payload.cardEvidenceError
         });
+        window.FinanceTokopediaProof?.setData({
+            cash: cashData,
+            evidence: payload.tokopediaEvidence,
+            loadError: payload.tokopediaEvidenceError
+        });
 
         const filtered = getFilteredData();
         const filteredW = getFilteredWithdrawals();
@@ -1790,6 +1796,9 @@ function initNavigation() {
                 } else if (targetViewId === "view-toped-card") {
                     topBarTitle.textContent = "Tokopedia Card Tracker";
                     topBarDesc.textContent = "Tokopedia Card active billing and installments";
+                } else if (targetViewId === "view-tokopedia-proof") {
+                    topBarTitle.textContent = "Tokopedia Card Proof";
+                    topBarDesc.textContent = "Bank screenshot evidence, imported installments and settlement";
                 } else if (targetViewId === "view-spaylater") {
                     topBarTitle.textContent = "SPayLater Tracker";
                     topBarDesc.textContent = "SPayLater active billings and monthly installments";
@@ -1846,6 +1855,8 @@ function initNavigation() {
                 window.FinanceIntegrity?.render();
             } else if (targetViewId === "view-visa-review") {
                 window.FinanceVisaReview?.render();
+            } else if (targetViewId === "view-tokopedia-proof") {
+                window.FinanceTokopediaProof?.render();
             } else if (targetViewId === "view-income") {
                 if (incomeMonthlyChart) incomeMonthlyChart.resize();
                 if (incomeCategoryChart) incomeCategoryChart.resize();

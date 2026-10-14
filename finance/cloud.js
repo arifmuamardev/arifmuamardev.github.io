@@ -248,6 +248,19 @@ import { createClient } from "https://cdn.jsdelivr.net/npm/@neondatabase/neon-js
       cardEvidenceError = true;
     }
 
+    // Private screenshot evidence. A failure must not affect sign-in or
+    // other dashboard views. This table is read-only for authenticated users.
+    let tokopediaEvidence = [];
+    let tokopediaEvidenceError = false;
+    try {
+      tokopediaEvidence = await fetchAll("tokopedia_card_evidence", [
+        { column: "captured_on" }, { column: "evidence_key" }
+      ]);
+    } catch (error) {
+      console.error("Unable to load Tokopedia Card evidence:", error);
+      tokopediaEvidenceError = true;
+    }
+
     return {
       cash,
       withdrawals,
@@ -257,6 +270,8 @@ import { createClient } from "https://cdn.jsdelivr.net/npm/@neondatabase/neon-js
       budgets,
       cardEvidence,
       cardEvidenceError,
+      tokopediaEvidence,
+      tokopediaEvidenceError,
       settings: settingsResult.data
     };
   }
