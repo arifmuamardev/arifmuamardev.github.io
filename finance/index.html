@@ -23,12 +23,14 @@
     <link rel="stylesheet" href="features/data-tools.css?v=4.7.0">
     <link rel="stylesheet" href="features/monthly-budget.css?v=4.8.0">
     <link rel="stylesheet" href="features/monthly-review.css?v=4.9.0">
+    <link rel="stylesheet" href="features/forecast.css?v=5.0.0">
     <script src="features/transaction-editor.js?v=4.7.0" defer></script>
     <script src="features/transaction-history.js?v=4.5.0" defer></script>
     <script src="features/data-tools.js?v=4.7.0" defer></script>
     <script src="features/monthly-budget.js?v=4.8.0" defer></script>
     <script src="features/monthly-review.js?v=4.9.0" defer></script>
-    <script src="app.js?v=4.9.1" defer></script>
+    <script src="features/forecast.js?v=5.0.0" defer></script>
+    <script src="app.js?v=5.0.0" defer></script>
 </head>
 <body class="dark-theme">
     <div id="auth-gate" class="auth-gate" aria-live="polite">
@@ -120,6 +122,7 @@
                     <button class="nav-btn" data-target="view-analytics"><i class="fa-solid fa-chart-pie"></i><span>Analytics</span></button>
                     <button class="nav-btn" data-target="view-budget"><i class="fa-solid fa-bullseye"></i><span>Budget</span></button>
                     <button class="nav-btn" data-target="view-review"><i class="fa-solid fa-clipboard-check"></i><span>Monthly Review</span></button>
+                    <button class="nav-btn" data-target="view-forecast"><i class="fa-solid fa-chart-line"></i><span>Forecast</span></button>
                 </div>
 
                 <div class="sidebar-category">
@@ -613,6 +616,144 @@
                             <div id="review-signal-list" class="review-signal-list">
                                 <div class="review-empty">Calculating review signals…</div>
                             </div>
+                        </section>
+                    </div>
+                </section>
+            </div>
+
+            <div id="view-forecast" class="dashboard-view hidden">
+                <section class="forecast-workspace">
+                    <div class="forecast-hero glass-panel">
+                        <div>
+                            <span class="home-section-kicker">Forward-looking, evidence-limited</span>
+                            <h2>Forecast & Upcoming Commitments</h2>
+                            <p>Separate what is already known from what is only a scenario. Known commitments come from future-dated ledger records; historical scenarios use recent completed months and never assume future income.</p>
+                        </div>
+                        <span id="forecast-confidence" class="forecast-confidence limited">Limited confidence</span>
+                    </div>
+
+                    <section class="forecast-summary-grid" aria-label="Forecast summary">
+                        <article class="forecast-summary-card glass-panel">
+                            <span>Recorded balance</span>
+                            <strong id="forecast-recorded-balance">—</strong>
+                            <small id="forecast-balance-date">No running balance available</small>
+                        </article>
+                        <article class="forecast-summary-card glass-panel">
+                            <span>Known outflow · next 30d</span>
+                            <strong id="forecast-known-30d">¥0</strong>
+                            <small id="forecast-known-30d-meta">0 scheduled items</small>
+                        </article>
+                        <article class="forecast-summary-card glass-panel">
+                            <span>Balance after known 30d</span>
+                            <strong id="forecast-known-balance">—</strong>
+                            <small id="forecast-known-balance-meta">Known commitments only</small>
+                        </article>
+                        <article class="forecast-summary-card glass-panel">
+                            <span>Recent median monthly spend</span>
+                            <strong id="forecast-median-spend">¥0</strong>
+                            <small id="forecast-median-spend-meta">Previous 3 complete months</small>
+                        </article>
+                    </section>
+
+                    <div class="forecast-grid">
+                        <section class="forecast-panel glass-panel">
+                            <div class="forecast-panel-head">
+                                <div>
+                                    <span class="home-section-kicker">Scenario view</span>
+                                    <h3>What the balance could look like</h3>
+                                </div>
+                                <span>No unrecorded income assumed</span>
+                            </div>
+
+                            <div class="forecast-scenario-list">
+                                <article class="forecast-scenario">
+                                    <div class="forecast-scenario-top">
+                                        <strong>Known commitments only · 30 days</strong>
+                                        <strong id="forecast-scenario-known">—</strong>
+                                    </div>
+                                    <p id="forecast-scenario-known-detail">Only future-dated ledger entries are applied.</p>
+                                </article>
+
+                                <article class="forecast-scenario">
+                                    <div class="forecast-scenario-top">
+                                        <strong>Recent-spending stress test</strong>
+                                        <strong id="forecast-scenario-median">—</strong>
+                                    </div>
+                                    <p id="forecast-scenario-median-detail">Uses recent median spending as a reference, not a prediction.</p>
+                                </article>
+
+                                <article class="forecast-scenario">
+                                    <div class="forecast-scenario-top">
+                                        <strong>Balance runway stress test</strong>
+                                        <strong id="forecast-runway">—</strong>
+                                    </div>
+                                    <p id="forecast-runway-detail">Recorded balance divided by recent median monthly spending.</p>
+                                </article>
+
+                                <article id="forecast-budget-scenario" class="forecast-scenario hidden">
+                                    <div class="forecast-scenario-top">
+                                        <strong>Remaining saved budget targets</strong>
+                                        <strong id="forecast-budget-remaining">¥0</strong>
+                                    </div>
+                                    <p id="forecast-budget-detail">No current-month targets.</p>
+                                </article>
+                            </div>
+                        </section>
+
+                        <section class="forecast-panel glass-panel">
+                            <div class="forecast-panel-head">
+                                <div>
+                                    <span class="home-section-kicker">Known future records</span>
+                                    <h3>Upcoming · next 90 days</h3>
+                                </div>
+                                <span>Click to inspect</span>
+                            </div>
+                            <div id="forecast-upcoming-list" class="forecast-upcoming-list">
+                                <div class="forecast-empty">Loading scheduled entries…</div>
+                            </div>
+                        </section>
+                    </div>
+
+                    <div class="forecast-grid">
+                        <section class="forecast-panel glass-panel">
+                            <div class="forecast-panel-head">
+                                <div>
+                                    <span class="home-section-kicker">Historical basis</span>
+                                    <h3>Recent spending reference</h3>
+                                </div>
+                                <span>Net expenses</span>
+                            </div>
+                            <div id="forecast-history-list" class="forecast-history-list">
+                                <div class="forecast-empty">Calculating recent monthly spending…</div>
+                            </div>
+                        </section>
+
+                        <section class="forecast-panel glass-panel">
+                            <div class="forecast-panel-head">
+                                <div>
+                                    <span class="home-section-kicker">Forecast quality</span>
+                                    <h3>What limits this view</h3>
+                                </div>
+                                <span>Transparent assumptions</span>
+                            </div>
+
+                            <div class="forecast-quality-grid">
+                                <div class="forecast-quality-item">
+                                    <strong>Data freshness</strong>
+                                    <span id="forecast-freshness">—</span>
+                                </div>
+                                <div class="forecast-quality-item">
+                                    <strong>Historical basis</strong>
+                                    <span id="forecast-history-basis">—</span>
+                                </div>
+                                <div class="forecast-quality-item">
+                                    <strong>Known schedule</strong>
+                                    <span id="forecast-scheduled-count">—</span>
+                                </div>
+                            </div>
+
+                            <div id="forecast-quality-warning" class="forecast-warning hidden"></div>
+                            <p class="forecast-method-note">Known-balance scenario applies only future-dated ledger entries. Historical scenario asks what happens if this month approaches the median net spending of the previous three complete calendar months. Runway divides the latest recorded balance by that median. No scenario assumes salary, stipend, or other income unless it already exists as a future-dated ledger entry.</p>
                         </section>
                     </div>
                 </section>
