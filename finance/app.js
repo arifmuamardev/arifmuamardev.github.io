@@ -1626,8 +1626,8 @@ function initNavigation() {
                     topBarTitle.textContent = "Mobile Tracker";
                     topBarDesc.textContent = "Monthly phone billing history and trend";
                 } else if (targetViewId === "view-ai-insights") {
-                    topBarTitle.textContent = "Financial Advisor";
-                    topBarDesc.textContent = "AI financial diagnostics and budget simulations";
+                    topBarTitle.textContent = "Financial Insights";
+                    topBarDesc.textContent = "Transparent ledger signals and what-if budget scenarios";
                 } else if (targetViewId === "view-online-shopping") {
                     topBarTitle.textContent = "Online Shopping Tracker";
                     topBarDesc.textContent = "Centralized dashboard for Amazon, Shopee, AliExpress, Temu, Tokopedia, and Booth purchases";
@@ -1696,106 +1696,181 @@ function initNavigation() {
 }
 
 // --- Balance Reconciliation View Logic ---
-function updateReconciliationView() {
+function getReconciliationPreview() {
     const walletInput = document.getElementById("recon-wallet");
     const jpBankInput = document.getElementById("recon-jp-bank");
     const hokurikuBankInput = document.getElementById("recon-hokuriku-bank");
-    
-    if (!walletInput || !jpBankInput || !hokurikuBankInput) return;
-    
-    const walletVal = parseFloat(walletInput.value) || 0;
-    const jpBankVal = parseFloat(jpBankInput.value) || 0;
-    const hokurikuBankVal = parseFloat(hokurikuBankInput.value) || 0;
-    
-    const totalActual = walletVal + jpBankVal + hokurikuBankVal;
-    
-    // Sum JPY cashless CC KU transactions from the configured reconciliation start date
-    let pendingBills = 0;
-    cashData.forEach(item => {
-        if (item.payment_type === 'cashless' && (item.note || '').includes('CC KU')) {
-            if (item.tanggal >= (window.BUDGET_CONFIG?.ccKuReconciliationStart || '2026-05-16')) {
-                pendingBills += item.pengeluaran;
-            }
-        }
-    });
-    
+    const inputs = [walletInput, jpBankInput, hokurikuBankInput];
+
+    const allFilled = inputs.every(input =>
+        input &&
+        input.value.trim() !== "" &&
+        Number.isFinite(Number(input.value)) &&
+        Number(input.value) >= 0
+    );
+
+    const wallet = allFilled ? Number(walletInput.value) : 0;
+    const jpBank = allFilled ? Number(jpBankInput.value) : 0;
+    const hokurikuBank = allFilled ? Number(hokurikuBankInput.value) : 0;
+    const totalActual = wallet + jpBank + hokurikuBank;
+
+    const reconciliationStart = window.BUDGET_CONFIG?.ccKuReconciliationStart || "2026-05-16";
+    const pendingBills = cashData.reduce((sum, item) => {
+        const isPendingCard =
+            item.payment_type === "cashless" &&
+            String(item.note || "").includes("CC KU") &&
+            String(item.tanggal || "") >= reconciliationStart;
+        return sum + (isPendingCard ? (Number(item.pengeluaran) || 0) : 0);
+    }, 0);
+
+    const latestCash = [...cashData].reverse().find(item =>
+        item.saldo !== null &&
+        item.saldo !== undefined &&
+        Number.isFinite(Number(item.saldo))
+    );
+    const dashboardBalance = Number(latestCash?.saldo) || 0;
     const expectedNet = totalActual - pendingBills;
-    
-    // Current Dashboard Net Balance is the latest saldo in cashData
-    const latestCash = [...cashData].reverse().find(item => item.saldo !== null && item.saldo !== undefined);
-    const dashboardBal = latestCash ? latestCash.saldo : 0;
-    
-    const discrepancy = expectedNet - dashboardBal;
-    
-    // Format UI elements
-    document.getElementById("calc-actual-funds").textContent = `¥${formatCurrency(totalActual)}`;
-    document.getElementById("calc-pending-bills").textContent = `- ¥${formatCurrency(pendingBills)}`;
-    document.getElementById("calc-expected-net").textContent = `¥${formatCurrency(expectedNet)}`;
-    document.getElementById("calc-dashboard-balance").textContent = `¥${formatCurrency(dashboardBal)}`;
-    
+    const discrepancy = expectedNet - dashboardBalance;
+
+    return {
+        allFilled,
+        wallet,
+        jpBank,
+        hokurikuBank,
+        totalActual,
+        pendingBills,
+        expectedNet,
+        dashboardBalance,
+        discrepancy
+    };
+}
+
+function updateReconciliationView() {
+    const preview = getReconciliationPreview();
+    const actualEl = document.getElementById("calc-actual-funds");
+    const reviewActualEl = document.getElementById("recon-review-actual");
+    const pendingEl = document.getElementById("calc-pending-bills");
+    const expectedEl = document.getElementById("calc-expected-net");
+    const dashboardEl = document.getElementById("calc-dashboard-balance");
     const discrepancyEl = document.getElementById("calc-discrepancy");
-    if (Math.abs(discrepancy) < 0.01) {
-        discrepancyEl.textContent = "¥0";
-        discrepancyEl.style.color = "#10b981"; // green
-    } else if (discrepancy > 0) {
-        discrepancyEl.textContent = `+ ¥${formatCurrency(discrepancy)}`;
-        discrepancyEl.style.color = "#10b981"; // green
-    } else {
-        discrepancyEl.textContent = `- ¥${formatCurrency(Math.abs(discrepancy))}`;
-        discrepancyEl.style.color = "var(--color-expense)"; // red
+    const explanationEl = document.getElementById("recon-adjustment-explanation");
+    const confirm = document.getElementById("recon-review-confirm");
+    const btn = document.getElementById("btn-reconcile");
+    const status = document.getElementById("recon-status-message");
+
+    const actualText = `¥${formatCurrency(preview.totalActual)}`;
+    if (actualEl) actualEl.textContent = actualText;
+    if (reviewActualEl) reviewActualEl.textContent = actualText;
+    if (pendingEl) pendingEl.textContent = `¥${formatCurrency(preview.pendingBills)}`;
+    if (expectedEl) expectedEl.textContent = preview.allFilled ? `¥${formatCurrency(preview.expectedNet)}` : "—";
+    if (dashboardEl) dashboardEl.textContent = `¥${formatCurrency(preview.dashboardBalance)}`;
+
+    if (!preview.allFilled) {
+        if (discrepancyEl) {
+            discrepancyEl.textContent = "—";
+            discrepancyEl.style.color = "var(--text-muted)";
+        }
+        if (explanationEl) explanationEl.textContent = "Enter all three balances to calculate.";
+        if (confirm) {
+            confirm.checked = false;
+            confirm.disabled = true;
+        }
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-lock"></i> Record adjustment';
+        }
+        if (status) {
+            status.className = "recon-status info";
+            status.innerHTML = '<i class="fa-solid fa-circle-info"></i><span>This screen is a preview. No database change has been made.</span>';
+        }
+        return preview;
     }
+
+    const isBalanced = Math.abs(preview.discrepancy) < 0.01;
+    if (discrepancyEl) {
+        if (isBalanced) {
+            discrepancyEl.textContent = "¥0";
+            discrepancyEl.style.color = "var(--color-income)";
+        } else if (preview.discrepancy > 0) {
+            discrepancyEl.textContent = `+ ¥${formatCurrency(preview.discrepancy)}`;
+            discrepancyEl.style.color = "var(--color-income)";
+        } else {
+            discrepancyEl.textContent = `− ¥${formatCurrency(Math.abs(preview.discrepancy))}`;
+            discrepancyEl.style.color = "var(--color-expense)";
+        }
+    }
+
+    if (explanationEl) {
+        explanationEl.textContent = isBalanced
+            ? "Recorded balance already matches the expected balance."
+            : preview.discrepancy > 0
+                ? "This would add a positive balance adjustment to the ledger."
+                : "This would add an expense adjustment to reduce the recorded balance.";
+    }
+
+    if (confirm) {
+        confirm.disabled = isBalanced;
+        if (isBalanced) confirm.checked = false;
+    }
+    if (btn) {
+        btn.disabled = isBalanced || !confirm?.checked;
+        btn.innerHTML = isBalanced
+            ? '<i class="fa-solid fa-circle-check"></i> Already reconciled'
+            : '<i class="fa-solid fa-file-circle-check"></i> Record adjustment';
+    }
+    if (status) {
+        status.className = isBalanced ? "recon-status success" : "recon-status warning";
+        status.innerHTML = isBalanced
+            ? '<i class="fa-solid fa-circle-check"></i><span>No adjustment is required. Actual funds and recorded balance are aligned after pending card bills.</span>'
+            : '<i class="fa-solid fa-triangle-exclamation"></i><span>Review the proposed adjustment carefully. It will create one ledger transaction only after you confirm below.</span>';
+    }
+    return preview;
 }
 
 function initReconciliation() {
     const btn = document.getElementById("btn-reconcile");
-    const walletInput = document.getElementById("recon-wallet");
-    const jpBankInput = document.getElementById("recon-jp-bank");
-    const hokurikuBankInput = document.getElementById("recon-hokuriku-bank");
-    
-    if (!btn) return;
-    
-    const inputs = [walletInput, jpBankInput, hokurikuBankInput];
-    inputs.forEach(input => {
-        if (input) {
-            input.addEventListener("input", updateReconciliationView);
-        }
-    });
-    
+    const confirm = document.getElementById("recon-review-confirm");
+    const inputs = [
+        document.getElementById("recon-wallet"),
+        document.getElementById("recon-jp-bank"),
+        document.getElementById("recon-hokuriku-bank")
+    ];
+
+    if (!btn || !confirm) return;
+
+    inputs.forEach(input => input?.addEventListener("input", () => {
+        confirm.checked = false;
+        updateReconciliationView();
+    }));
+    confirm.addEventListener("change", updateReconciliationView);
+    updateReconciliationView();
+
     btn.addEventListener("click", async () => {
+        const preview = updateReconciliationView();
+        if (!preview.allFilled || !confirm.checked || Math.abs(preview.discrepancy) < 0.01) return;
+
         btn.disabled = true;
-        const originalText = btn.innerHTML;
-        btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Reconciling...`;
-        
-        const walletVal = parseFloat(walletInput.value) || 0;
-        const jpBankVal = parseFloat(jpBankInput.value) || 0;
-        const hokurikuBankVal = parseFloat(hokurikuBankInput.value) || 0;
-        
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Recording adjustment…';
+
         try {
             const result = await window.BudgetCloud.reconcile({
-                wallet: walletVal,
-                jpBank: jpBankVal,
-                hokurikuBank: hokurikuBankVal
+                wallet: preview.wallet,
+                jpBank: preview.jpBank,
+                hokurikuBank: preview.hokurikuBank
             });
-            if (result?.success) {
-                const statusMessage = document.getElementById("recon-status-message");
-                if (statusMessage) {
-                    statusMessage.className = "success-alert";
-                    statusMessage.style.background = "rgba(16, 185, 129, 0.1)";
-                    statusMessage.style.border = "1px solid rgba(16, 185, 129, 0.2)";
-                    statusMessage.style.color = "#10b981";
-                    statusMessage.innerHTML = `<i class="fa-solid fa-circle-check"></i> ${escapeHtml(result.message || 'Reconciliation completed.')}`;
-                }
-                showToast(result.message || "Reconciliation completed.", "success");
-                window.setTimeout(() => window.location.reload(), 650);
-            } else {
-                throw new Error(result?.error || "Failed to reconcile balance.");
+            if (!result?.success) throw new Error(result?.error || "Failed to reconcile balance.");
+
+            const status = document.getElementById("recon-status-message");
+            if (status) {
+                status.className = "recon-status success";
+                status.innerHTML = `<i class="fa-solid fa-circle-check"></i><span>${escapeHtml(result.message || "Reconciliation completed.")}</span>`;
             }
+            showToast(result.message || "Reconciliation completed.", "success");
+            window.setTimeout(() => window.location.reload(), 650);
         } catch (error) {
             console.error("Reconciliation failed:", error);
             showToast(error.message || "Reconciliation failed.", "error");
-        } finally {
-            btn.disabled = false;
-            btn.innerHTML = originalText;
+            updateReconciliationView();
         }
     });
 }
@@ -3818,76 +3893,142 @@ let simBaselineRent = 45228;
 let simBaselineUtilities = 7377;
 
 function updateAIRecommendationsPage(filteredData) {
-    const incomeData = filteredData.filter(item => item.pemasukan > 0 && !isExcludedTransfer(item.item_normalized));
-    const totalIncome = incomeData.reduce((sum, item) => sum + item.pemasukan, 0);
+    const source = cashData.length ? cashData : filteredData;
+    if (!source.length) return;
 
-    const expenseData = filteredData.filter(item => item.pengeluaran > 0 && !isExcludedTransfer(item.item_normalized));
-    const totalExpense = expenseData.reduce((sum, item) => sum + item.pengeluaran, 0);
+    const monthKey = item => String(item?.tanggal || "").slice(0, 7);
+    const tokyoNow = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Tokyo" }));
+    const currentKey = `${tokyoNow.getFullYear()}-${String(tokyoNow.getMonth() + 1).padStart(2, "0")}`;
 
-    const activeMonths = getUniqueMonths(filteredData);
-    const monthsCount = activeMonths.length || 1;
+    const activeKeys = [...new Set(source.map(monthKey).filter(Boolean))].sort();
+    const completeKeys = activeKeys.filter(key => key < currentKey);
+    const recentKey = completeKeys.at(-1) || activeKeys.at(-1);
+    const previousKey = completeKeys.length >= 2 ? completeKeys.at(-2) : null;
+    const analysisKeys = (completeKeys.length ? completeKeys : activeKeys).slice(-3);
+    const analysisRows = source.filter(item => analysisKeys.includes(monthKey(item)));
 
-    const rentData = filteredData.filter(item => item.item_normalized === "Apartment Rent" && item.pengeluaran > 0);
-    const gasData = filteredData.filter(item => item.item_normalized === "Gas Bill" && item.pengeluaran > 0);
-    const elecData = filteredData.filter(item => item.item_normalized === "Electricity Bill" && item.pengeluaran > 0);
-    const waterData = filteredData.filter(item => item.item_normalized === "Water Bill" && item.pengeluaran > 0);
-    const mobileData = filteredData.filter(item => item.item_normalized === "Mobile Bill" && item.pengeluaran > 0);
+    const validExpense = item =>
+        (Number(item.pengeluaran) || 0) > 0 &&
+        !isExcludedTransfer(item.item_normalized);
+    const validIncome = item =>
+        (Number(item.pemasukan) || 0) > 0 &&
+        !isExcludedTransfer(item.item_normalized);
 
-    const rentTotal = rentData.reduce((sum, item) => sum + item.pengeluaran, 0);
-    const gasTotal = gasData.reduce((sum, item) => sum + item.pengeluaran, 0);
-    const elecTotal = elecData.reduce((sum, item) => sum + item.pengeluaran, 0);
-    const waterTotal = waterData.reduce((sum, item) => sum + item.pengeluaran, 0);
-    const mobileTotal = mobileData.reduce((sum, item) => sum + item.pengeluaran, 0);
+    const sumExpenses = rows => rows.filter(validExpense).reduce((s,item)=>s+(Number(item.pengeluaran)||0),0);
+    const sumIncome = rows => rows.filter(validIncome).reduce((s,item)=>s+(Number(item.pemasukan)||0),0);
 
-    const avgRent = rentTotal / monthsCount;
-    const avgGas = gasTotal / monthsCount;
-    const avgElec = elecTotal / monthsCount;
-    const avgWater = waterTotal / monthsCount;
-    const avgMobile = mobileTotal / monthsCount;
-    const avgUtilitiesCombined = avgGas + avgElec + avgWater + avgMobile;
+    const recentRows = source.filter(item => monthKey(item) === recentKey);
+    const previousRows = previousKey ? source.filter(item => monthKey(item) === previousKey) : [];
+    const recentSpending = sumExpenses(recentRows);
+    const previousSpending = sumExpenses(previousRows);
 
-    simBaselineRent = avgRent || 45228;
-    simBaselineUtilities = avgUtilitiesCombined || 7377;
-    simBaselineIncome = (totalIncome / monthsCount) || 145000;
+    const categoryTotals = {};
+    analysisRows.filter(validExpense).forEach(item => {
+        const category = item.kategori_normalized || item.kategori || "Others";
+        categoryTotals[category] = (categoryTotals[category] || 0) + (Number(item.pengeluaran) || 0);
+    });
+    const categoryRank = Object.entries(categoryTotals).sort((a,b)=>b[1]-a[1]);
+    const topCategory = categoryRank[0] || ["—",0];
+    const analysisExpense = categoryRank.reduce((s,[,value])=>s+value,0);
+    const topShare = analysisExpense > 0 ? (topCategory[1] / analysisExpense) * 100 : 0;
 
-    const savings = totalIncome - totalExpense;
-    let savingsRate = totalIncome > 0 ? (savings / totalIncome) * 100 : 0;
-    if (savingsRate < 0) savingsRate = 0;
+    const fixedNames = new Set(["Apartment Rent","Gas Bill","Electricity Bill","Water Bill","Mobile Bill"]);
+    const fixedTotal = analysisRows.reduce((sum,item) =>
+        sum + (fixedNames.has(item.item_normalized) && validExpense(item) ? (Number(item.pengeluaran)||0) : 0), 0);
+    const fixedAverage = analysisKeys.length ? fixedTotal / analysisKeys.length : 0;
 
-    let healthScore = 70;
-    if (savingsRate >= 35) healthScore += 15;
-    else if (savingsRate >= 20) healthScore += 10;
-    else if (savingsRate >= 5) healthScore += 5;
-    else if (savingsRate <= 0) healthScore -= 15;
+    const latest = [...source].filter(item=>item.tanggal).sort((a,b)=>String(b.tanggal).localeCompare(String(a.tanggal)) || Number(b.id||0)-Number(a.id||0))[0];
+    const latestDate = latest?.tanggal ? new Date(`${latest.tanggal}T00:00:00+09:00`) : null;
+    const freshnessDays = latestDate ? Math.max(0, Math.floor((Date.now() - latestDate.getTime()) / 86400000)) : null;
 
-    const rentToIncomeRatio = totalIncome > 0 ? (rentTotal / totalIncome) * 100 : 0;
-    if (rentToIncomeRatio > 0 && rentToIncomeRatio <= 30) healthScore += 10;
-    else if (rentToIncomeRatio > 0 && rentToIncomeRatio <= 35) healthScore += 5;
-    else if (rentToIncomeRatio > 35) healthScore -= 10;
+    const recentEl = document.getElementById("insight-recent-spending");
+    const windowEl = document.getElementById("insight-spending-window");
+    const topEl = document.getElementById("insight-top-category");
+    const topShareEl = document.getElementById("insight-top-category-share");
+    const fixedEl = document.getElementById("insight-fixed-costs");
+    const freshnessEl = document.getElementById("insight-freshness");
+    const freshnessNoteEl = document.getElementById("insight-freshness-note");
 
-    const hasSpayLater = filteredData.some(item => item.item_normalized && item.item_normalized.includes("SPayLater"));
-    if (hasSpayLater) healthScore -= 5;
+    if (recentEl) recentEl.textContent = `¥${formatCurrency(recentSpending)}`;
+    if (windowEl) windowEl.textContent = recentKey ? `${recentKey} recorded spending` : "No active month";
+    if (topEl) topEl.textContent = topCategory[0];
+    if (topShareEl) topShareEl.textContent = topCategory[1] ? `${topShare.toFixed(1)}% of expenses across last ${analysisKeys.length} active month${analysisKeys.length===1?"":"s"}` : "No expense data";
+    if (fixedEl) fixedEl.textContent = `¥${formatCurrency(fixedAverage)}`;
+    if (freshnessEl) freshnessEl.textContent = freshnessDays === null ? "—" : freshnessDays === 0 ? "Today" : `${freshnessDays}d ago`;
+    if (freshnessNoteEl) freshnessNoteEl.textContent = latest?.tanggal ? `Latest record: ${latest.tanggal}` : "No ledger record";
 
-    healthScore = Math.max(30, Math.min(100, healthScore));
+    const recentAnalysisIncome = sumIncome(analysisRows);
+    simBaselineIncome = analysisKeys.length ? recentAnalysisIncome / analysisKeys.length : 145000;
 
-    const scoreEl = document.getElementById("ai-health-score");
-    const circleEl = document.getElementById("ai-health-circle");
-    if (scoreEl) scoreEl.textContent = healthScore;
-    if (circleEl) {
-        circleEl.style.background = `conic-gradient(var(--accent-pink) 0% ${healthScore}%, rgba(255,255,255,0.1) ${healthScore}% 100%)`;
+    const rentRows = analysisRows.filter(item => item.item_normalized === "Apartment Rent" && validExpense(item));
+    const utilityRows = analysisRows.filter(item =>
+        ["Gas Bill","Electricity Bill","Water Bill","Mobile Bill"].includes(item.item_normalized) && validExpense(item));
+    simBaselineRent = analysisKeys.length
+        ? rentRows.reduce((s,item)=>s+(Number(item.pengeluaran)||0),0) / analysisKeys.length
+        : 45228;
+    simBaselineUtilities = analysisKeys.length
+        ? utilityRows.reduce((s,item)=>s+(Number(item.pengeluaran)||0),0) / analysisKeys.length
+        : 7377;
+
+    if (!(simBaselineIncome > 0)) simBaselineIncome = 145000;
+    if (!(simBaselineRent > 0)) simBaselineRent = 45228;
+    if (!(simBaselineUtilities > 0)) simBaselineUtilities = 7377;
+
+    const signals = [];
+    if (previousSpending > 0 && recentSpending > 0) {
+        const delta = ((recentSpending - previousSpending) / previousSpending) * 100;
+        signals.push({
+            type: delta > 15 ? "warning" : delta < -10 ? "success" : "",
+            icon: delta > 0 ? "fa-arrow-trend-up" : "fa-arrow-trend-down",
+            title: delta > 0 ? "Monthly spending increased" : "Monthly spending decreased",
+            text: `${recentKey} was ${Math.abs(delta).toFixed(1)}% ${delta > 0 ? "higher" : "lower"} than ${previousKey}.`
+        });
     }
 
-    const voiceEl = document.getElementById("ai-advisor-voice");
-    if (voiceEl) {
-        if (totalIncome === 0) {
-            voiceEl.innerHTML = "Hello Arif! Please select a wider timeline or filters that contain income records. I need income data to perform a complete advisor diagnostics scan.";
-        } else if (savings < 0) {
-            voiceEl.innerHTML = `Hello Arif! Your overall financial health is **concerning (${healthScore}/100)**. In this period, your outflows exceeded your income by **¥${Math.abs(savings).toLocaleString(undefined, {maximumFractionDigits:0})}**. I highly recommend reducing discretionary shopping, avoiding new card installments, and setting hard daily spending caps to regain balance.`;
-        } else {
-            voiceEl.innerHTML = `Hello Arif! Your overall financial health is **strong (${healthScore}/100)**. You saved **¥${savings.toLocaleString(undefined, {maximumFractionDigits:0})}** (or **${savingsRate.toFixed(1)}%** of your total inflows) during this period. I have compiled critical insights below to help you optimize your apartment rent, summer utilities, and card payments.`;
-        }
+    if (topCategory[1] > 0) {
+        signals.push({
+            type: topShare >= 35 ? "warning" : "",
+            icon: "fa-chart-pie",
+            title: `${topCategory[0]} is the largest expense category`,
+            text: `It represents ${topShare.toFixed(1)}% of spending across the analysis window.`
+        });
     }
 
+    const digitalExpense = analysisRows.reduce((sum,item) =>
+        sum + (validExpense(item) && item.payment_type === "cashless" ? (Number(item.pengeluaran)||0) : 0),0);
+    const digitalShare = analysisExpense > 0 ? digitalExpense / analysisExpense * 100 : 0;
+    if (analysisExpense > 0) {
+        signals.push({
+            type: "",
+            icon: "fa-credit-card",
+            title: "Digital payment share",
+            text: `${digitalShare.toFixed(1)}% of analyzed expenses were recorded as cashless.`
+        });
+    }
+
+    signals.push({
+        type: freshnessDays !== null && freshnessDays <= 3 ? "success" : freshnessDays !== null && freshnessDays > 7 ? "warning" : "",
+        icon: "fa-clock-rotate-left",
+        title: freshnessDays === null ? "No freshness signal" : freshnessDays <= 3 ? "Ledger is current" : "Check data freshness",
+        text: freshnessDays === null ? "No dated transaction is available." : `The latest transaction was recorded ${freshnessDays === 0 ? "today" : `${freshnessDays} day${freshnessDays===1?"":"s"} ago`}.`
+    });
+
+    const list = document.getElementById("insights-signal-list");
+    const count = document.getElementById("insight-signal-count");
+    if (count) count.textContent = `${signals.length} signal${signals.length===1?"":"s"}`;
+    if (list) {
+        list.innerHTML = signals.map(signal => `
+            <article class="insight-signal ${signal.type || ""}">
+                <span class="insight-signal-icon"><i class="fa-solid ${signal.icon}"></i></span>
+                <div><strong>${escapeHtml(signal.title)}</strong><p>${escapeHtml(signal.text)}</p></div>
+            </article>
+        `).join("");
+    }
+
+    const assumptionsEl = document.getElementById("sim-assumptions");
+    if (assumptionsEl) {
+        assumptionsEl.textContent = `Baseline: income ¥${formatCurrency(simBaselineIncome)}, rent ¥${formatCurrency(simBaselineRent)}, utilities ¥${formatCurrency(simBaselineUtilities)} per month.`;
+    }
     updateSimulator();
 }
 
@@ -3954,13 +4095,13 @@ function updateSimulator() {
 
     if (commentEl) {
         if (simulatedSavingsRate >= 35) {
-            commentEl.textContent = `Outstanding! A simulated savings rate of ${simulatedSavingsRate.toFixed(1)}% is highly secure. You will save approximately ¥${simulatedSavings.toLocaleString(undefined, {maximumFractionDigits: 0})} monthly, allowing you to quickly accumulate a solid cash buffer.`;
+            commentEl.textContent = `This scenario leaves approximately ¥${simulatedSavings.toLocaleString(undefined, {maximumFractionDigits: 0})} per month (${simulatedSavingsRate.toFixed(1)}% of modeled income).`;
         } else if (simulatedSavingsRate >= 20) {
-            commentEl.textContent = `Sufficient & Sustainable. You will save ¥${simulatedSavings.toLocaleString(undefined, {maximumFractionDigits: 0})} monthly (${simulatedSavingsRate.toFixed(1)}%). This budget fits a healthy student lifestyle while maintaining emergency reserves.`;
+            commentEl.textContent = `This scenario leaves ¥${simulatedSavings.toLocaleString(undefined, {maximumFractionDigits: 0})} per month (${simulatedSavingsRate.toFixed(1)}%). Compare it with your preferred savings buffer.`;
         } else if (simulatedSavingsRate >= 0) {
-            commentEl.textContent = `Tight budget warning. You will save only ¥${simulatedSavings.toLocaleString(undefined, {maximumFractionDigits: 0})} monthly (${simulatedSavingsRate.toFixed(1)}%). We suggest lowering your Entertainment or Discretionary sliders by ¥5,000 to improve financial headroom.`;
+            commentEl.textContent = `This scenario leaves ¥${simulatedSavings.toLocaleString(undefined, {maximumFractionDigits: 0})} per month (${simulatedSavingsRate.toFixed(1)}%). Reducing a discretionary target would increase the modeled buffer.`;
         } else {
-            commentEl.textContent = `Monthly Deficit! Under this simulation, you are spending ¥${Math.abs(simulatedSavings).toLocaleString(undefined, {maximumFractionDigits: 0})} beyond your scholarship. Please lower your spending targets immediately to avoid drawing down savings.`;
+            commentEl.textContent = `This scenario models a monthly deficit of ¥${Math.abs(simulatedSavings).toLocaleString(undefined, {maximumFractionDigits: 0})}. Adjust one or more targets to test a non-deficit scenario.`;
         }
     }
 }
