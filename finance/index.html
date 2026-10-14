@@ -16,11 +16,13 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.min.js"></script>
     <!-- Public Neon endpoints live in config.js; database credentials never ship to the browser. -->
     <script src="config.js?v=4.0.1"></script>
-    <script type="module" src="cloud.js?v=4.4.0"></script>
+    <script type="module" src="cloud.js?v=4.5.0"></script>
     <link rel="stylesheet" href="styles.css?v=4.3.0">
     <link rel="stylesheet" href="features/transaction-editor.css?v=4.4.0">
+    <link rel="stylesheet" href="features/transaction-history.css?v=4.5.0">
     <script src="features/transaction-editor.js?v=4.4.0" defer></script>
-    <script src="app.js?v=4.4.0" defer></script>
+    <script src="features/transaction-history.js?v=4.5.0" defer></script>
+    <script src="app.js?v=4.5.0" defer></script>
 </head>
 <body class="dark-theme">
     <div id="auth-gate" class="auth-gate" aria-live="polite">
@@ -434,6 +436,15 @@
                                 <button type="button" class="transaction-filter-chip active" data-transaction-flow="all">All</button>
                                 <button type="button" class="transaction-filter-chip" data-transaction-flow="expense">Expense</button>
                                 <button type="button" class="transaction-filter-chip" data-transaction-flow="income">Income</button>
+                            </div>
+                        </div>
+
+                        <div class="transaction-segment-group">
+                            <span class="transaction-segment-label">Status</span>
+                            <div class="transaction-segmented" role="group" aria-label="Transaction status">
+                                <button type="button" class="transaction-filter-chip" data-transaction-status="all">All</button>
+                                <button type="button" class="transaction-filter-chip active" data-transaction-status="posted">Posted</button>
+                                <button type="button" class="transaction-filter-chip" data-transaction-status="scheduled">Scheduled</button>
                             </div>
                         </div>
 
@@ -3013,6 +3024,7 @@
                 <small id="transaction-drawer-date">—</small>
             </section>
             <dl class="transaction-detail-list">
+                <div><dt>Status</dt><dd><span id="transaction-detail-status" class="transaction-status-badge posted">Posted</span></dd></div>
                 <div><dt>Category</dt><dd id="transaction-detail-category">—</dd></div>
                 <div><dt>Payment</dt><dd id="transaction-detail-payment">—</dd></div>
                 <div><dt>Store / location</dt><dd id="transaction-detail-store">—</dd></div>
@@ -3031,6 +3043,15 @@
                     <span>Delete remains disabled. Older cash records also protect financial fields so later running balances cannot be silently rewritten.</span>
                 </div>
             </div>
+            <section class="transaction-history-panel" aria-label="Transaction history">
+                <div class="transaction-history-panel-header">
+                    <h3>Audit history</h3>
+                    <span>Changes since v4.5</span>
+                </div>
+                <div id="transaction-history-list" class="transaction-history-list">
+                    <div class="transaction-history-empty">Open a transaction to load its history.</div>
+                </div>
+            </section>
         </div>
     </aside>
     <div id="sidebar-scrim" class="sidebar-scrim hidden"></div>
