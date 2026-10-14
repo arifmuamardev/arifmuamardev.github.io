@@ -16,13 +16,15 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.min.js"></script>
     <!-- Public Neon endpoints live in config.js; database credentials never ship to the browser. -->
     <script src="config.js?v=4.0.1"></script>
-    <script type="module" src="cloud.js?v=4.5.0"></script>
+    <script type="module" src="cloud.js?v=4.6.0"></script>
     <link rel="stylesheet" href="styles.css?v=4.3.0">
     <link rel="stylesheet" href="features/transaction-editor.css?v=4.4.0">
     <link rel="stylesheet" href="features/transaction-history.css?v=4.5.0">
+    <link rel="stylesheet" href="features/data-tools.css?v=4.6.0">
     <script src="features/transaction-editor.js?v=4.4.0" defer></script>
     <script src="features/transaction-history.js?v=4.5.0" defer></script>
-    <script src="app.js?v=4.5.0" defer></script>
+    <script src="features/data-tools.js?v=4.6.0" defer></script>
+    <script src="app.js?v=4.6.0" defer></script>
 </head>
 <body class="dark-theme">
     <div id="auth-gate" class="auth-gate" aria-live="polite">
@@ -120,6 +122,7 @@
                 <div class="sidebar-category">
                     <div class="sidebar-category-title">Tools</div>
                     <button class="nav-btn" data-target="view-ai-insights"><i class="fa-solid fa-lightbulb"></i><span>Insights</span></button>
+                    <button class="nav-btn" data-target="view-data-tools"><i class="fa-solid fa-database"></i><span>Data & Backup</span></button>
                 </div>
             </nav>
             <div class="sidebar-account">
@@ -2828,6 +2831,101 @@
                             </div>
                         </div>
                     </section>
+                </section>
+            </div>
+
+            <div id="view-data-tools" class="dashboard-view hidden">
+                <section class="data-tools-workspace">
+                    <div class="data-tools-hero glass-panel">
+                        <div>
+                            <span class="home-section-kicker">Integrity & portability</span>
+                            <h2>Data & Backup</h2>
+                            <p>Review ledger quality, distinguish posted from scheduled records, and create private local exports whenever you want an independent copy of your finance data.</p>
+                        </div>
+                        <div class="data-local-badge"><i class="fa-solid fa-laptop-file"></i> Exported locally</div>
+                    </div>
+
+                    <section class="data-summary-grid" aria-label="Data summary">
+                        <article class="data-summary-card glass-panel">
+                            <span>Connected rows</span>
+                            <strong id="data-total-rows">0</strong>
+                            <small>Cash + ATM + BNI + Muamalat + GoPay</small>
+                        </article>
+                        <article class="data-summary-card glass-panel">
+                            <span>Posted ledger</span>
+                            <strong id="data-posted-count">0</strong>
+                            <small>Transactions dated through today</small>
+                        </article>
+                        <article class="data-summary-card glass-panel">
+                            <span>Scheduled ledger</span>
+                            <strong id="data-scheduled-count">0</strong>
+                            <small>Future-dated transactions</small>
+                        </article>
+                        <article class="data-summary-card glass-panel">
+                            <span>Possible duplicate groups</span>
+                            <strong id="data-duplicate-count">0</strong>
+                            <small>Exact signatures for manual review</small>
+                        </article>
+                    </section>
+
+                    <div class="data-tools-grid">
+                        <section class="data-panel glass-panel">
+                            <div class="data-panel-header">
+                                <div>
+                                    <span class="home-section-kicker">Health checks</span>
+                                    <h3>Ledger quality</h3>
+                                </div>
+                                <button type="button" id="data-refresh-checks"><i class="fa-solid fa-rotate"></i> Recheck</button>
+                            </div>
+                            <div id="data-quality-checks" class="data-check-list">
+                                <div class="home-empty-state">Checking ledger quality…</div>
+                            </div>
+                            <div class="data-backup-meta">
+                                <strong>Posted date range</strong>
+                                <span id="data-range">—</span><br>
+                                Latest posted: <span id="data-latest-posted">—</span><br>
+                                Missing essentials: <span id="data-missing-count">0</span> · “Others” category: <span id="data-others-count">0</span> · Audit events: <span id="data-audit-count">0</span>
+                            </div>
+                        </section>
+
+                        <section class="data-panel glass-panel">
+                            <div class="data-panel-header">
+                                <div>
+                                    <span class="home-section-kicker">Portable copy</span>
+                                    <h3>Local exports</h3>
+                                </div>
+                            </div>
+
+                            <div class="data-export-stack">
+                                <article class="data-export-card">
+                                    <h4>Full finance backup (JSON)</h4>
+                                    <p>Includes the currently loaded cash ledger, ATM activity, BNI, Muamalat, GoPay, and app settings in one structured file.</p>
+                                    <button type="button" class="data-export-btn" id="data-export-json">
+                                        <i class="fa-solid fa-file-code"></i>
+                                        Export full backup
+                                    </button>
+                                </article>
+
+                                <article class="data-export-card">
+                                    <h4>Cash ledger (CSV)</h4>
+                                    <p>Spreadsheet-friendly ledger export with formula-injection protection for text cells.</p>
+                                    <button type="button" class="data-export-btn" id="data-export-csv">
+                                        <i class="fa-solid fa-file-csv"></i>
+                                        Export cash ledger
+                                    </button>
+                                </article>
+                            </div>
+
+                            <div class="data-backup-meta">
+                                <strong>Last local export recorded in this browser</strong>
+                                <span id="data-last-backup">No local export recorded yet</span>
+                            </div>
+                            <div class="data-privacy-note">
+                                <i class="fa-solid fa-triangle-exclamation"></i>
+                                <span>Export files contain private financial information. Store them in a secure location; the dashboard does not upload the generated file anywhere.</span>
+                            </div>
+                        </section>
+                    </div>
                 </section>
             </div>
 
