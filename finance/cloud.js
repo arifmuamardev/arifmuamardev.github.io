@@ -171,6 +171,43 @@ import { createClient } from "https://cdn.jsdelivr.net/npm/@neondatabase/neon-js
     return data;
   }
 
+  async function saveTransaction({
+    id = null,
+    date,
+    item,
+    category,
+    store = "",
+    flow,
+    amount,
+    paymentType,
+    note = ""
+  }) {
+    const neon = getClient();
+    if (!neon) throw new Error("Neon is not configured.");
+
+    const numericAmount = Number(amount);
+    if (!date) throw new Error("Transaction date is required.");
+    if (!String(item || "").trim()) throw new Error("Description is required.");
+    if (!Number.isFinite(numericAmount) || numericAmount <= 0) {
+      throw new Error("Amount must be greater than zero.");
+    }
+
+    const { data, error } = await neon.rpc("save_transaction", {
+      p_transaction_id: id ? Number(id) : null,
+      p_date: date,
+      p_item: String(item).trim(),
+      p_category: String(category || "Others").trim() || "Others",
+      p_store: String(store || "").trim(),
+      p_flow: flow,
+      p_amount: numericAmount,
+      p_payment_type: paymentType,
+      p_note: String(note || "").trim()
+    });
+
+    if (error) throw error;
+    return data;
+  }
+
   function bindAuthUI() {
     const form = document.getElementById("auth-form");
     const logout = document.getElementById("logout-btn");
@@ -212,6 +249,7 @@ import { createClient } from "https://cdn.jsdelivr.net/npm/@neondatabase/neon-js
     getCurrentUser,
     loadAll,
     reconcile,
+    saveTransaction,
     signOut,
     bindAuthUI,
     setGateState
