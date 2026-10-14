@@ -451,9 +451,37 @@
     render();
   }
 
+  function getSummary(month = currentMonthTokyo()) {
+    const actualMap = actualByCategory(month);
+    const targets = budgets.filter(b => String(b.month_start || "").slice(0, 7) === month);
+    const details = targets.map(b => {
+      const target = amount(b.amount);
+      const spent = actualMap.get(b.category) || 0;
+      const ratio = target > 0 ? spent / target : 0;
+      return {
+        category: b.category,
+        target,
+        spent,
+        remaining: target - spent,
+        ratio
+      };
+    }).sort((a, b) => b.ratio - a.ratio);
+
+    return {
+      month,
+      targetCount: targets.length,
+      planned: details.reduce((sum, row) => sum + row.target, 0),
+      spent: details.reduce((sum, row) => sum + row.spent, 0),
+      over: details.filter(row => row.ratio > 1),
+      near: details.filter(row => row.ratio >= .8 && row.ratio <= 1),
+      details
+    };
+  }
+
   window.MonthlyBudget = {
     init,
     setData,
-    render
+    render,
+    getSummary
   };
 })();
