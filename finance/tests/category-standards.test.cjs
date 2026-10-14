@@ -43,3 +43,8 @@ test("new standardized categories are available in picker",()=>{
  for(const s of ["Transfers & Movements","Card Settlement","Research & Education","Others"])
    assert.ok(categories.includes(s));
 });
+
+test("business subscriptions are never mistaken for a bus fare",()=>{
+ assert.equal(check("Business software consulting"),null);
+ assert.equal(check("Bus fare (Kanazawa)"),"Transportation");
+});

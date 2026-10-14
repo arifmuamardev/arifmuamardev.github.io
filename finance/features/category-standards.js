@@ -40,7 +40,7 @@
       return {category:"Research & Education",reason:"Educational software or research-related equipment."};
     if(contains(description,/chatgpt|bitwarden|huggingface|\.com domain|domain renewal|perpanjangan domain|paypal .*spaceship/))
       return {category:"Software/Service",reason:"Software subscription or domain service."};
-    if(contains(description,/bus|railroad|hokuriku railroad|北陸鉄道|train ticket|tiket kereta|ico(ca)? charge|shinkansen/))
+    if(contains(description,/\bbus\b|railroad|北陸鉄道|train ticket|tiket kereta|\b(?:icoca|ico) charge\b|shinkansen/))
       return {category:"Transportation",reason:"Public transport or transit payment."};
     if(contains(description,/electricity|hokuriku electricity|北陸電力|listrik/))
       return {category:"Electricity",reason:"Electricity provider charge."};
