@@ -1371,8 +1371,23 @@ function setupFilters() {
 
 function setupTransactionWorkspace() {
     window.TransactionEditor?.init();
+    window.MonthlyBudget?.init();
+
     window.addEventListener("budget:data-tools-error", event => {
         showToast(event.detail?.message || "Data export failed.", "error");
+    });
+    window.addEventListener("budget:planner-error", event => {
+        showToast(event.detail?.message || "Budget target could not be saved.", "error");
+    });
+    window.addEventListener("budget:plan-changed", async event => {
+        const action = event.detail?.action || "updated";
+        const category = event.detail?.category || "Budget";
+        showToast(`${category} target ${action}.`, "success");
+        try {
+            await fetchAndInitData();
+        } catch (error) {
+            console.error("Refresh after budget change failed:", error);
+        }
     });
 
     window.addEventListener("budget:transaction-saved", async event => {
@@ -1620,6 +1635,10 @@ async function fetchAndInitData() {
             gopay: gopayData,
             settings
         });
+        window.MonthlyBudget?.setData({
+            cash: cashData,
+            budgets: payload.budgets || []
+        });
 
         const filtered = getFilteredData();
         const filteredW = getFilteredWithdrawals();
@@ -1676,6 +1695,9 @@ function initNavigation() {
                 } else if (targetViewId === "view-analytics") {
                     topBarTitle.textContent = "Analytics & Charts";
                     topBarDesc.textContent = "Visual summaries, category allocations, and cash flows";
+                } else if (targetViewId === "view-budget") {
+                    topBarTitle.textContent = "Monthly Budget";
+                    topBarDesc.textContent = "Set category targets and compare plan with posted spending";
                 } else if (targetViewId === "view-transactions") {
                     topBarTitle.textContent = "Transactions";
                     topBarDesc.textContent = "Search, filter, and inspect your complete ledger";
@@ -1752,6 +1774,8 @@ function initNavigation() {
             } else if (targetViewId === "view-analytics") {
                 if (monthlyFlowChart) monthlyFlowChart.resize();
                 if (categoryPieChart) categoryPieChart.resize();
+            } else if (targetViewId === "view-budget") {
+                window.MonthlyBudget?.render();
             } else if (targetViewId === "view-income") {
                 if (incomeMonthlyChart) incomeMonthlyChart.resize();
                 if (incomeCategoryChart) incomeCategoryChart.resize();
