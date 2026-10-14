@@ -1579,9 +1579,18 @@ async function fetchAndInitData() {
             setupFilters();
             setupSorting();
             setupTransactionWorkspace();
+            window.DataTools?.init();
             controlsInitialized = true;
         }
         window.TransactionEditor?.setRows(cashData);
+        window.DataTools?.setData({
+            cash: cashData,
+            withdrawals: withdrawalsData,
+            bni: bniData,
+            muamalat: muamalatData,
+            gopay: gopayData,
+            settings
+        });
 
         const filtered = getFilteredData();
         const filteredW = getFilteredWithdrawals();
@@ -1692,6 +1701,9 @@ function initNavigation() {
                 } else if (targetViewId === "view-ai-insights") {
                     topBarTitle.textContent = "Financial Insights";
                     topBarDesc.textContent = "Transparent ledger signals and what-if budget scenarios";
+                } else if (targetViewId === "view-data-tools") {
+                    topBarTitle.textContent = "Data & Backup";
+                    topBarDesc.textContent = "Review ledger integrity and create private local exports";
                 } else if (targetViewId === "view-online-shopping") {
                     topBarTitle.textContent = "Online Shopping Tracker";
                     topBarDesc.textContent = "Centralized dashboard for Amazon, Shopee, AliExpress, Temu, Tokopedia, and Booth purchases";
@@ -1749,6 +1761,8 @@ function initNavigation() {
                 if (mobileTrendChart) mobileTrendChart.resize();
             } else if (targetViewId === "view-ai-insights") {
                 updateSimulator();
+            } else if (targetViewId === "view-data-tools") {
+                window.DataTools?.render();
             } else if (targetViewId === "view-online-shopping") {
                 const filtered = getFilteredData();
                 updateOnlineShoppingPage(filtered);
@@ -6394,6 +6408,7 @@ function updateSPayLaterCharts(selectedPeriod) {
 
 // --- Online Shopping Tracker Logic ---
 function updateOnlineShoppingPage(filteredData) {
+    filteredData = getPostedTransactions(filteredData);
     const tableBody = document.getElementById("ecom-table-body");
     const countEl = document.getElementById("ecom-count");
     const kpiTotalEl = document.getElementById("ecom-kpi-total");
