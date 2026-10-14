@@ -77,3 +77,9 @@ test("classification holds original amounts and ledger input unchanged",()=>{
  const a=row(1,"Transfers & Movements",300),copy=JSON.stringify(a);
  tally([a]);assert.equal(JSON.stringify(a),copy);
 });
+
+test("legacy Hokuriku VISA payment marker is settlement not ordinary transfer",()=>{
+ const r=row(1,"Transfers & Movements",2152,0,
+ {item:"Hokuriku VISA",item_normalized:"Self-Transfer (Internal)"});
+ assert.equal(classify(r).kind,"settlement");
+});

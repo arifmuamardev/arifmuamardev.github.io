@@ -92,10 +92,16 @@ function showToast(message, type = 'info') {
     window.setTimeout(() => toast.remove(), 4200);
 }
 
-function isExcludedTransfer(itemNormalized) {
-    return itemNormalized === 'Self-Transfer (Internal)' || 
-           itemNormalized === 'Bank Inflow / Auto-Deposit' || 
-           itemNormalized === 'Loan Repayment (Ryan)';
+function isExcludedTransfer(entry) {
+    // Shared financial-flow semantics now power KPIs, Charts, Income and
+    // Expenses. Preserve the old fallback only if the module cannot load.
+    if (entry && typeof entry === "object" && window.FinanceFlowClassifier) {
+        return !["spending", "income"].includes(window.FinanceFlowClassifier.classify(entry).kind);
+    }
+    const label = typeof entry === "object" ? entry?.item_normalized : entry;
+    return label === 'Self-Transfer (Internal)' ||
+           label === 'Bank Inflow / Auto-Deposit' ||
+           label === 'Loan Repayment (Ryan)';
 }
 
 function todayTokyoDateString() {
@@ -321,7 +327,7 @@ function updateKPIs(filteredData) {
             spendingVal = summary.spending;
         } else {
             filteredData.forEach(item => {
-                if (!isExcludedTransfer(item.item_normalized)) {
+                if (!isExcludedTransfer(item)) {
                     incomeVal += Number(item.pemasukan) || 0;
                     spendingVal += Number(item.pengeluaran) || 0;
                 }
@@ -424,7 +430,7 @@ function updateHomeCommandCenter() {
             incomeEntries:rows.filter(item=>window.FinanceFlowClassifier.classify(item).kind==="income").length
         };
         return rows.reduce((acc,item)=>{
-            if(isExcludedTransfer(item.item_normalized))return acc;
+            if(isExcludedTransfer(item))return acc;
             acc.income+=Number(item.pemasukan)||0;
             acc.spending+=Number(item.pengeluaran)||0;
             if((Number(item.pemasukan)||0)>0)acc.incomeEntries++;
@@ -733,7 +739,7 @@ function updateTransactionSummary(rows) {
     if (!countEl || !incomeEl || !expenseEl || !netEl) return;
 
     const summary = rows.reduce((acc, item) => {
-        if (isExcludedTransfer(item.item_normalized)) return acc;
+        if (isExcludedTransfer(item)) return acc;
         const income = Number(item.pemasukan) || 0;
         const expense = Number(item.pengeluaran) || 0;
         acc.income += income;
@@ -848,7 +854,7 @@ function updateLedgerTable(filteredData) {
         row.setAttribute("role", "button");
         row.setAttribute("aria-label", `Open transaction details for ${item.item_normalized || item.item || "transaction"}`);
 
-        const isTransfer = isExcludedTransfer(item.item_normalized);
+        const isTransfer = isExcludedTransfer(item);
         const income = Number(item.pemasukan) || 0;
         const expense = Number(item.pengeluaran) || 0;
 
@@ -1013,7 +1019,7 @@ function renderMonthlyFlowChart(filteredData, colors) {
         if (!monthlySummary[key]) {
             monthlySummary[key] = { income: 0, expense: 0 };
         }
-        if (!isExcludedTransfer(item.item_normalized)) {
+        if (!isExcludedTransfer(item)) {
             monthlySummary[key].income += item.pemasukan;
             monthlySummary[key].expense += item.pengeluaran;
         }
@@ -1104,7 +1110,7 @@ function renderCategoryPieChart(filteredData, colors) {
     const categoriesSum = {};
     filteredData.forEach(item => {
         if (item.pengeluaran !== 0) {
-            if (!isExcludedTransfer(item.item_normalized)) {
+            if (!isExcludedTransfer(item)) {
                 categoriesSum[item.kategori_normalized] = (categoriesSum[item.kategori_normalized] || 0) + item.pengeluaran;
             }
         }
@@ -3496,7 +3502,7 @@ function updateIncomePage(filteredData) {
     // 1. Filter out transfers
     const incomeData = filteredData.filter(item => 
         item.pemasukan > 0 && 
-        !isExcludedTransfer(item.item_normalized)
+        !isExcludedTransfer(item)
     );
 
     // 2. Calculate KPIs
@@ -3568,7 +3574,7 @@ function renderIncomeMonthlyChart(filteredData, colors) {
 
     const monthlySummary = {};
     filteredData.forEach(item => {
-        if (item.pemasukan > 0 && !isExcludedTransfer(item.item_normalized)) {
+        if (item.pemasukan > 0 && !isExcludedTransfer(item)) {
             const key = `${item.tahun}-${item.bulan}`;
             monthlySummary[key] = (monthlySummary[key] || 0) + item.pemasukan;
         }
@@ -3637,7 +3643,7 @@ function renderIncomeCategoryChart(filteredData, colors) {
 
     const categoriesSum = {};
     filteredData.forEach(item => {
-        if (item.pemasukan > 0 && !isExcludedTransfer(item.item_normalized)) {
+        if (item.pemasukan > 0 && !isExcludedTransfer(item)) {
             categoriesSum[item.kategori_normalized] = (categoriesSum[item.kategori_normalized] || 0) + item.pemasukan;
         }
     });
@@ -3704,7 +3710,7 @@ function updateExpensePage(filteredData) {
     // 1. Filter out transfers
     const expenseData = filteredData.filter(item => 
         item.pengeluaran !== 0 && 
-        !isExcludedTransfer(item.item_normalized)
+        !isExcludedTransfer(item)
     );
 
     // 2. Calculate KPIs
@@ -3790,7 +3796,7 @@ function renderExpenseMonthlyChart(filteredData, colors) {
 
     const monthlySummary = {};
     filteredData.forEach(item => {
-        if (item.pengeluaran !== 0 && !isExcludedTransfer(item.item_normalized)) {
+        if (item.pengeluaran !== 0 && !isExcludedTransfer(item)) {
             const key = `${item.tahun}-${item.bulan}`;
             monthlySummary[key] = (monthlySummary[key] || 0) + item.pengeluaran;
         }
@@ -3859,7 +3865,7 @@ function renderExpenseCategoryChart(filteredData, colors) {
 
     const categoriesSum = {};
     filteredData.forEach(item => {
-        if (item.pengeluaran !== 0 && !isExcludedTransfer(item.item_normalized)) {
+        if (item.pengeluaran !== 0 && !isExcludedTransfer(item)) {
             categoriesSum[item.kategori_normalized] = (categoriesSum[item.kategori_normalized] || 0) + item.pengeluaran;
         }
     });
@@ -4219,10 +4225,10 @@ function updateInsightsPage(filteredData) {
 
     const validExpense = item =>
         (Number(item.pengeluaran) || 0) > 0 &&
-        !isExcludedTransfer(item.item_normalized);
+        !isExcludedTransfer(item);
     const validIncome = item =>
         (Number(item.pemasukan) || 0) > 0 &&
-        !isExcludedTransfer(item.item_normalized);
+        !isExcludedTransfer(item);
 
     const sumExpenses = rows => rows.filter(validExpense).reduce((s,item)=>s+(Number(item.pengeluaran)||0),0);
     const sumIncome = rows => rows.filter(validIncome).reduce((s,item)=>s+(Number(item.pemasukan)||0),0);

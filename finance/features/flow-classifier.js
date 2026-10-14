@@ -19,7 +19,8 @@
     const cat=category(row), label=name(row), description=text(row);
     // Payment marker first. Merchant purchases marked 'CC KU' are NOT payments.
     if (cat === "Card Settlement" ||
-       /Hokuriku VISA Card Payment|Hokuriku VISA Auto-Debit|CC KU settlement|Tokopedia Card \(Payment:|PAYMENT_KKCB/i.test(description))
+       /Hokuriku VISA Card Payment|Hokuriku VISA Auto-Debit|CC KU settlement|Tokopedia Card \(Payment:|PAYMENT_KKCB/i.test(description) ||
+       (/^Hokuriku VISA$/i.test(String(row?.item || "").trim()) && label === "Self-Transfer (Internal)"))
       return {kind:SETTLEMENT,confidence:"high",reason:"Card liability settlement, not a second purchase"};
     if (cat === "Account Reconciliation" || /Reconciliation Adjustment|^Balance Adjustment$/i.test(label))
       return {kind:ADJUSTMENT,confidence:"high",reason:"Account/balance bookkeeping adjustment"};
