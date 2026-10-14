@@ -327,6 +327,216 @@ function updateKPIs(filteredData) {
     }
 }
 
+// Home command center: current-month snapshot independent of historical filters.
+function updateHomeCommandCenter() {
+    const monthLabelEl = document.getElementById("home-period-label");
+    const greetingEl = document.getElementById("home-greeting");
+    const balanceEl = document.getElementById("home-current-balance");
+    const balanceMetaEl = document.getElementById("home-balance-meta");
+    const incomeEl = document.getElementById("home-month-income");
+    const spendingEl = document.getElementById("home-month-spending");
+    const netEl = document.getElementById("home-month-net");
+    const savingsEl = document.getElementById("home-month-savings");
+    const incomeNoteEl = document.getElementById("home-income-note");
+    const spendingNoteEl = document.getElementById("home-spending-note");
+    const alertsEl = document.getElementById("home-alerts");
+    const recentEl = document.getElementById("home-recent-list");
+
+    if (!monthLabelEl || !balanceEl || !alertsEl || !recentEl) return;
+
+    const now = new Date();
+    const tokyoParts = Object.fromEntries(
+        new Intl.DateTimeFormat("en-CA", {
+            timeZone: "Asia/Tokyo",
+            year: "numeric",
+            month: "2-digit",
+            day: "2-digit"
+        }).formatToParts(now).filter(p => p.type !== "literal").map(p => [p.type, p.value])
+    );
+    const year = Number(tokyoParts.year);
+    const month = Number(tokyoParts.month);
+    const monthKey = `${year}-${String(month).padStart(2, "0")}`;
+    const previousMonthDate = new Date(Date.UTC(year, month - 2, 1));
+    const previousKey = `${previousMonthDate.getUTCFullYear()}-${String(previousMonthDate.getUTCMonth() + 1).padStart(2, "0")}`;
+
+    const monthLabel = new Intl.DateTimeFormat("en", {
+        month: "long",
+        year: "numeric",
+        timeZone: "Asia/Tokyo"
+    }).format(now);
+    monthLabelEl.textContent = monthLabel;
+
+    const hour = Number(new Intl.DateTimeFormat("en-GB", {
+        hour: "2-digit",
+        hour12: false,
+        timeZone: "Asia/Tokyo"
+    }).format(now));
+    const greeting = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
+    if (greetingEl) greetingEl.textContent = `${greeting}. Your money at a glance.`;
+
+    const dateKey = item => String(item?.tanggal || "").slice(0, 7);
+    const currentMonth = cashData.filter(item => dateKey(item) === monthKey);
+    const previousMonth = cashData.filter(item => dateKey(item) === previousKey);
+
+    const summarize = rows => rows.reduce((acc, item) => {
+        if (isExcludedTransfer(item.item_normalized)) return acc;
+        acc.income += Number(item.pemasukan) || 0;
+        acc.spending += Number(item.pengeluaran) || 0;
+        if ((Number(item.pemasukan) || 0) > 0) acc.incomeEntries += 1;
+        return acc;
+    }, { income: 0, spending: 0, incomeEntries: 0 });
+
+    const current = summarize(currentMonth);
+    const previous = summarize(previousMonth);
+    const net = current.income - current.spending;
+    const savingsRate = current.income > 0
+        ? (net / current.income) * 100
+        : (current.spending > 0 ? -100 : 0);
+
+    const latestBalanceItem = [...cashData].reverse().find(item =>
+        item.saldo !== null && item.saldo !== undefined && Number.isFinite(Number(item.saldo))
+    );
+    const latestBalance = Number(latestBalanceItem?.saldo) || 0;
+    balanceEl.textContent = formatCurrency(latestBalance);
+    if (balanceMetaEl) {
+        balanceMetaEl.textContent = latestBalanceItem?.tanggal
+            ? `Latest balance recorded ${latestBalanceItem.tanggal}`
+            : "No recorded balance yet";
+    }
+
+    if (incomeEl) incomeEl.textContent = `¥${formatCurrency(current.income)}`;
+    if (spendingEl) spendingEl.textContent = `¥${formatCurrency(current.spending)}`;
+    if (netEl) {
+        netEl.textContent = `${net < 0 ? "−" : ""}¥${formatCurrency(Math.abs(net))}`;
+        netEl.classList.toggle("income", net >= 0);
+        netEl.classList.toggle("expense", net < 0);
+    }
+    if (savingsEl) {
+        savingsEl.textContent = `${savingsRate.toFixed(1)}%`;
+        savingsEl.classList.toggle("income", savingsRate >= 20);
+        savingsEl.classList.toggle("expense", savingsRate < 0);
+    }
+    if (incomeNoteEl) {
+        incomeNoteEl.textContent = current.incomeEntries
+            ? `${current.incomeEntries} income entr${current.incomeEntries === 1 ? "y" : "ies"} this month`
+            : "No income recorded this month";
+    }
+
+    let spendingDelta = null;
+    if (previous.spending > 0) {
+        spendingDelta = ((current.spending - previous.spending) / previous.spending) * 100;
+    }
+    if (spendingNoteEl) {
+        spendingNoteEl.textContent = spendingDelta === null
+            ? "No prior-month baseline"
+            : `${Math.abs(spendingDelta).toFixed(0)}% ${spendingDelta >= 0 ? "higher" : "lower"} than last month`;
+    }
+
+    const alerts = [];
+    if (currentMonth.length === 0) {
+        alerts.push({
+            type: "warning",
+            icon: "fa-calendar-xmark",
+            title: "No activity recorded this month",
+            text: "Check whether the latest transactions have been imported."
+        });
+    }
+
+    if (spendingDelta !== null && spendingDelta >= 15) {
+        alerts.push({
+            type: "warning",
+            icon: "fa-arrow-trend-up",
+            title: "Spending is rising",
+            text: `This month is ${spendingDelta.toFixed(0)}% above last month's spending so far.`
+        });
+    } else if (spendingDelta !== null && spendingDelta <= -15) {
+        alerts.push({
+            type: "success",
+            icon: "fa-arrow-trend-down",
+            title: "Spending is lower",
+            text: `This month is ${Math.abs(spendingDelta).toFixed(0)}% below last month's spending.`
+        });
+    }
+
+    if (current.income > 0 && savingsRate < 20) {
+        alerts.push({
+            type: savingsRate < 0 ? "warning" : "",
+            icon: savingsRate < 0 ? "fa-triangle-exclamation" : "fa-piggy-bank",
+            title: savingsRate < 0 ? "Monthly outflow exceeds income" : "Savings rate below 20%",
+            text: savingsRate < 0
+                ? "Review large or discretionary expenses before month end."
+                : `Current savings rate is ${savingsRate.toFixed(1)}%.`
+        });
+    } else if (current.income > 0 && savingsRate >= 20) {
+        alerts.push({
+            type: "success",
+            icon: "fa-circle-check",
+            title: "Savings pace looks healthy",
+            text: `Current savings rate is ${savingsRate.toFixed(1)}%.`
+        });
+    }
+
+    const latestTxn = [...cashData].reverse().find(item => item.tanggal);
+    if (latestTxn?.tanggal) {
+        const latestDate = new Date(`${latestTxn.tanggal}T00:00:00+09:00`);
+        const daysOld = Math.floor((now.getTime() - latestDate.getTime()) / 86400000);
+        if (daysOld > 7) {
+            alerts.push({
+                type: "warning",
+                icon: "fa-clock-rotate-left",
+                title: "Data may need a refresh",
+                text: `Latest recorded transaction is ${daysOld} days old.`
+            });
+        }
+    }
+
+    if (!alerts.length) {
+        alerts.push({
+            type: "success",
+            icon: "fa-circle-check",
+            title: "Nothing urgent detected",
+            text: "Current month signals look stable."
+        });
+    }
+
+    alertsEl.innerHTML = alerts.slice(0, 3).map(alert => `
+        <div class="home-alert ${alert.type || ""}">
+            <span class="home-alert-icon"><i class="fa-solid ${alert.icon}"></i></span>
+            <div><strong>${escapeHtml(alert.title)}</strong><p>${escapeHtml(alert.text)}</p></div>
+        </div>
+    `).join("");
+
+    const recent = [...cashData]
+        .sort((a, b) => String(b.tanggal || "").localeCompare(String(a.tanggal || "")) || Number(b.id || 0) - Number(a.id || 0))
+        .slice(0, 5);
+
+    if (!recent.length) {
+        recentEl.innerHTML = '<div class="home-empty-state">No transactions yet.</div>';
+        return;
+    }
+
+    recentEl.innerHTML = recent.map(item => {
+        const income = Number(item.pemasukan) || 0;
+        const expense = Number(item.pengeluaran) || 0;
+        const isIncome = income > 0;
+        const amount = isIncome ? income : expense;
+        const amountText = amount
+            ? `${isIncome ? "+" : expense < 0 ? "+" : "−"}¥${formatCurrency(Math.abs(amount))}`
+            : "—";
+        const amountClass = isIncome || expense < 0 ? "income" : (expense > 0 ? "expense" : "");
+        const icon = isIncome ? "fa-arrow-down" : (expense ? "fa-arrow-up" : "fa-right-left");
+        const label = item.item_normalized || item.item || "Transaction";
+        const meta = [item.tanggal, item.kategori_normalized || item.kategori, item.tempat].filter(Boolean).join(" · ");
+        return `
+            <div class="home-recent-item">
+                <span class="home-recent-icon"><i class="fa-solid ${icon}"></i></span>
+                <span class="home-recent-main"><strong>${escapeHtml(label)}</strong><small>${escapeHtml(meta)}</small></span>
+                <span class="home-recent-amount ${amountClass}">${amountText}</span>
+            </div>
+        `;
+    }).join("");
+}
+
 // Helper to render styled category badges with distinct colors and FontAwesome icons
 function getCategoryBadgeHtml(kategori) {
     if (!kategori) return '';
@@ -1138,6 +1348,7 @@ async function fetchAndInitData() {
         const filtered = getFilteredData();
         const filteredW = getFilteredWithdrawals();
         updateKPIs(filtered);
+        updateHomeCommandCenter();
         updateLedgerTable(filtered);
         updateWithdrawalsTab(filteredW);
         updateCharts(filtered);
@@ -1176,14 +1387,15 @@ function initNavigation() {
 
             navButtons.forEach(b => b.classList.remove("active"));
             btn.classList.add("active");
+            btn.closest("details.sidebar-disclosure")?.setAttribute("open", "");
 
             // Update Top Bar Header dynamically
             const topBarTitle = document.querySelector(".welcome-text h2");
             const topBarDesc = document.querySelector(".welcome-text p");
             if (topBarTitle && topBarDesc) {
                 if (targetViewId === "view-balance") {
-                    topBarTitle.textContent = "Dashboard Overview";
-                    topBarDesc.textContent = "Track cash income, expenses, and running balance (Saldo)";
+                    topBarTitle.textContent = "Home";
+                    topBarDesc.textContent = "Your current financial snapshot and recent activity";
                 } else if (targetViewId === "view-analytics") {
                     topBarTitle.textContent = "Analytics & Charts";
                     topBarDesc.textContent = "Visual summaries, category allocations, and cash flows";
@@ -1426,7 +1638,7 @@ function initShellUX() {
     const pages = Array.from(document.querySelectorAll(".nav-btn")).map(btn => ({
         target: btn.dataset.target,
         label: btn.textContent.trim(),
-        group: btn.closest(".sidebar-category")?.querySelector(".sidebar-category-title")?.textContent.trim() || "",
+        group: btn.closest(".sidebar-category")?.querySelector(".sidebar-category-title")?.textContent.trim() || btn.closest(".sidebar-disclosure")?.querySelector("summary span")?.textContent.trim() || "",
         icon: btn.querySelector("i")?.className || "fa-solid fa-circle"
     }));
 
