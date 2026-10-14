@@ -1393,6 +1393,7 @@ function setupFilters() {
 function setupTransactionWorkspace() {
     window.TransactionEditor?.init();
     window.MonthlyBudget?.init();
+    window.MonthlyReview?.init();
 
     window.addEventListener("budget:data-tools-error", event => {
         showToast(event.detail?.message || "Data export failed.", "error");
@@ -1660,6 +1661,10 @@ async function fetchAndInitData() {
             cash: cashData,
             budgets: payload.budgets || []
         });
+        window.MonthlyReview?.setData({
+            cash: cashData,
+            budgets: payload.budgets || []
+        });
 
         const filtered = getFilteredData();
         const filteredW = getFilteredWithdrawals();
@@ -1719,6 +1724,9 @@ function initNavigation() {
                 } else if (targetViewId === "view-budget") {
                     topBarTitle.textContent = "Monthly Budget";
                     topBarDesc.textContent = "Set category targets and compare plan with posted spending";
+                } else if (targetViewId === "view-review") {
+                    topBarTitle.textContent = "Monthly Review";
+                    topBarDesc.textContent = "Close a month with income, spending, budget variance, and key drivers";
                 } else if (targetViewId === "view-transactions") {
                     topBarTitle.textContent = "Transactions";
                     topBarDesc.textContent = "Search, filter, and inspect your complete ledger";
@@ -1797,6 +1805,8 @@ function initNavigation() {
                 if (categoryPieChart) categoryPieChart.resize();
             } else if (targetViewId === "view-budget") {
                 window.MonthlyBudget?.render();
+            } else if (targetViewId === "view-review") {
+                window.MonthlyReview?.render();
             } else if (targetViewId === "view-income") {
                 if (incomeMonthlyChart) incomeMonthlyChart.resize();
                 if (incomeCategoryChart) incomeCategoryChart.resize();
