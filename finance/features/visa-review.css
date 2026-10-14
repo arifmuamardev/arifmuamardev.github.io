@@ -1,0 +1,32 @@
+/* VISA evidence and matching, read-only */
+.visa-proof {display:flex; flex-direction:column; gap:1rem}
+.visa-proof-head {padding:1.2rem}
+.visa-proof-head h2 {font:700 1.3rem 'Outfit',sans-serif; color:var(--text-primary);margin:.2rem 0 .45rem}
+.visa-proof-head p,.visa-proof-muted {color:var(--text-muted);font-size:.76rem;line-height:1.7}
+.visa-proof-kpis {display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.8rem}
+.visa-proof-kpi {padding:1rem;min-width:0}
+.visa-proof-kpi span {display:block;color:var(--text-muted);font-size:.69rem}
+.visa-proof-kpi strong {display:block;color:var(--text-primary);font:700 1.25rem 'Outfit',sans-serif;margin:.32rem 0;overflow-wrap:anywhere}
+.visa-proof-kpi small {color:var(--text-muted);font-size:.65rem;line-height:1.5}
+.visa-proof-grid {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1rem}
+.visa-proof-panel {padding:1.05rem;min-width:0}
+.visa-proof-panel h3 {font:700 1.02rem 'Outfit',sans-serif;margin:0 0 .5rem;color:var(--text-primary)}
+.visa-proof-check {display:flex;align-items:center;justify-content:space-between;gap:.75rem;border-bottom:1px solid var(--border-card);padding:.5rem 0;font-size:.72rem;color:var(--text-primary)}
+.visa-proof-check strong {color:var(--text-primary)}
+.visa-proof-warning {padding:1rem;border-left:3px solid #f59e0b;font-size:.74rem;line-height:1.7;color:var(--text-primary)}
+.visa-proof-filters {display:flex;gap:.5rem;flex-wrap:wrap;margin:.6rem 0}
+.visa-proof-filters button {background:transparent;border:1px solid var(--border-card);padding:.5rem .8rem;border-radius:9px;color:var(--text-primary);cursor:pointer;font-size:.72rem}
+.visa-proof-filters button.active {border-color:var(--color-primary);background:rgba(148,163,184,.12)}
+.visa-proof-table {display:flex;flex-direction:column;gap:.45rem}
+.visa-proof-row {display:grid;grid-template-columns:minmax(130px,1fr) auto minmax(110px,auto) auto;align-items:center;gap:.7rem;border:1px solid var(--border-card);border-radius:9px;padding:.7rem;color:var(--text-primary)}
+.visa-proof-label {min-width:0}
+.visa-proof-label strong {display:block;font-size:.73rem;overflow-wrap:anywhere}
+.visa-proof-label small {display:block;color:var(--text-muted);font-size:.65rem;margin-top:.22rem}
+.visa-proof-amount {font-size:.77rem}
+.visa-proof-status {font-size:.64rem;text-align:right}
+.visa-proof-unmatched {color:#e5a24b}
+.visa-proof-cc_candidate {color:var(--color-income)}
+.visa-proof-amount_candidate {color:var(--text-muted)}
+.visa-proof-detail {cursor:pointer;background:transparent;color:var(--text-primary);font-size:.63rem;padding:.4rem;border:1px solid var(--border-card);border-radius:6px}
+@media(max-width:900px){.visa-proof-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.visa-proof-grid{grid-template-columns:1fr}.visa-proof-row{grid-template-columns:1fr auto}.visa-proof-detail{grid-column:2;justify-self:end}.visa-proof-status{grid-column:1;text-align:left}}
+@media(max-width:540px){.visa-proof-kpis{grid-template-columns:1fr}.visa-proof-row{gap:.45rem}}

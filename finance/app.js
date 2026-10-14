@@ -1397,6 +1397,7 @@ function setupTransactionWorkspace() {
     window.FinanceForecast?.init();
     window.FinanceIntegrity?.init();
     window.FinanceAccountEvidence?.init();
+    window.FinanceVisaReview?.init();
 
     window.addEventListener("budget:data-tools-error", event => {
         showToast(event.detail?.message || "Data export failed.", "error");
@@ -1680,6 +1681,11 @@ async function fetchAndInitData() {
             muamalat: muamalatData,
             gopay: gopayData
         });
+        window.FinanceVisaReview?.setData({
+            cash: cashData,
+            evidence: payload.cardEvidence,
+            loadError: payload.cardEvidenceError
+        });
 
         const filtered = getFilteredData();
         const filteredW = getFilteredWithdrawals();
@@ -1778,6 +1784,9 @@ function initNavigation() {
                 } else if (targetViewId === "view-cc-ku") {
                     topBarTitle.textContent = "CC KU Tracker";
                     topBarDesc.textContent = "Hokuriku VISA Card active statement and billing cycles";
+                } else if (targetViewId === "view-visa-review") {
+                    topBarTitle.textContent = "Hokuriku VISA Proof";
+                    topBarDesc.textContent = "Compare bank statements and balance evidence with recorded expenses";
                 } else if (targetViewId === "view-toped-card") {
                     topBarTitle.textContent = "Tokopedia Card Tracker";
                     topBarDesc.textContent = "Tokopedia Card active billing and installments";
@@ -1835,6 +1844,8 @@ function initNavigation() {
                 window.FinanceForecast?.render();
             } else if (targetViewId === "view-integrity") {
                 window.FinanceIntegrity?.render();
+            } else if (targetViewId === "view-visa-review") {
+                window.FinanceVisaReview?.render();
             } else if (targetViewId === "view-income") {
                 if (incomeMonthlyChart) incomeMonthlyChart.resize();
                 if (incomeCategoryChart) incomeCategoryChart.resize();
@@ -2018,6 +2029,18 @@ function updateReconciliationView() {
             ? '<i class="fa-solid fa-circle-check"></i><span>No adjustment is required. Actual funds and recorded balance are aligned after pending card bills.</span>'
             : '<i class="fa-solid fa-triangle-exclamation"></i><span>Review the proposed adjustment carefully. It will create one ledger transaction only after you confirm below.</span>';
     }
+    // The legacy reconciliation RPC treats every historical CC KU purchase
+    // since a fixed start date as unpaid. Disable its write action until
+    // statement-level liabilities and actual balances have been reconciled.
+    if (confirm) { confirm.checked = false; confirm.disabled = true; }
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa-solid fa-lock"></i> Adjustment paused';
+    }
+    if (status) {
+        status.className = "recon-status warning";
+        status.textContent = "Balance adjustment is temporarily paused: historical credit card expenses are not a valid unpaid-bill total. Review Hokuriku VISA Proof before adjusting the ledger.";
+    }
     return preview;
 }
 
@@ -2040,6 +2063,8 @@ function initReconciliation() {
     updateReconciliationView();
 
     btn.addEventListener("click", async () => {
+        showToast("Balance adjustments are paused pending source-level card reconciliation.", "error");
+        return; // Safety gate: do not invoke legacy reconcile_balance with stale card debt.
         const preview = updateReconciliationView();
         if (!preview.allFilled || !confirm.checked || Math.abs(preview.discrepancy) < 0.01) return;
 

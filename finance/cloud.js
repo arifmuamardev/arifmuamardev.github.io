@@ -235,6 +235,19 @@ import { createClient } from "https://cdn.jsdelivr.net/npm/@neondatabase/neon-js
       fetchAll("monthly_budgets", [{ column: "month_start" }, { column: "category" }])
     ]);
 
+    // Private, owner-scoped card evidence. Failure must be visible in review UI,
+    // but must never block sign-in or hide existing financial records.
+    let cardEvidence = [];
+    let cardEvidenceError = false;
+    try {
+      cardEvidence = await fetchAll("cc_ku_evidence", [
+        { column: "reference_date" }, { column: "evidence_key" }
+      ]);
+    } catch (error) {
+      console.error("Unable to load VISA evidence:", error);
+      cardEvidenceError = true;
+    }
+
     return {
       cash,
       withdrawals,
@@ -242,6 +255,8 @@ import { createClient } from "https://cdn.jsdelivr.net/npm/@neondatabase/neon-js
       muamalat,
       gopay,
       budgets,
+      cardEvidence,
+      cardEvidenceError,
       settings: settingsResult.data
     };
   }
