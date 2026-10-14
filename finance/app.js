@@ -3928,7 +3928,8 @@ function updateAIRecommendationsPage(filteredData) {
         categoryTotals[category] = (categoryTotals[category] || 0) + (Number(item.pengeluaran) || 0);
     });
     const categoryRank = Object.entries(categoryTotals).sort((a,b)=>b[1]-a[1]);
-    const topCategory = categoryRank[0] || ["—",0];
+    const specificCategoryRank = categoryRank.filter(([name]) => String(name).toLowerCase() !== "others");
+    const topCategory = specificCategoryRank[0] || categoryRank[0] || ["—",0];
     const analysisExpense = categoryRank.reduce((s,[,value])=>s+value,0);
     const topShare = analysisExpense > 0 ? (topCategory[1] / analysisExpense) * 100 : 0;
 
@@ -3937,8 +3938,11 @@ function updateAIRecommendationsPage(filteredData) {
         sum + (fixedNames.has(item.item_normalized) && validExpense(item) ? (Number(item.pengeluaran)||0) : 0), 0);
     const fixedAverage = analysisKeys.length ? fixedTotal / analysisKeys.length : 0;
 
-    const latest = [...source].filter(item=>item.tanggal).sort((a,b)=>String(b.tanggal).localeCompare(String(a.tanggal)) || Number(b.id||0)-Number(a.id||0))[0];
-    const latestDate = latest?.tanggal ? new Date(`${latest.tanggal}T00:00:00+09:00`) : null;
+    const todayTokyo = `${tokyoNow.getFullYear()}-${String(tokyoNow.getMonth()+1).padStart(2,"0")}-${String(tokyoNow.getDate()).padStart(2,"0")}`;
+    const latest = [...source]
+        .filter(item => item.tanggal && String(item.tanggal).slice(0,10) <= todayTokyo)
+        .sort((a,b)=>String(b.tanggal).localeCompare(String(a.tanggal)) || Number(b.id||0)-Number(a.id||0))[0];
+    const latestDate = latest?.tanggal ? new Date(`${String(latest.tanggal).slice(0,10)}T00:00:00+09:00`) : null;
     const freshnessDays = latestDate ? Math.max(0, Math.floor((Date.now() - latestDate.getTime()) / 86400000)) : null;
 
     const recentEl = document.getElementById("insight-recent-spending");
