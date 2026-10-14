@@ -206,8 +206,9 @@
 
   function safeCsvCell(value) {
     let text = value === null || value === undefined ? "" : String(value);
+    const trimmed = text.trimStart();
     const isPlainNumber = /^-?\d+(?:\.\d+)?$/.test(text.trim());
-    if (!isPlainNumber && /^[=+\-@]/.test(text)) text = "'" + text;
+    if (!isPlainNumber && /^[=+\-@]/.test(trimmed)) text = "'" + text;
     return '"' + text.replaceAll('"', '""') + '"';
   }
 
