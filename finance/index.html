@@ -29,7 +29,7 @@
     <script src="features/data-tools.js?v=4.7.0" defer></script>
     <script src="features/monthly-budget.js?v=4.8.0" defer></script>
     <script src="features/monthly-review.js?v=4.9.0" defer></script>
-    <script src="features/forecast.js?v=5.0.0" defer></script>
+    <script src="features/forecast.js?v=5.1.0" defer></script>
     <script src="app.js?v=5.0.0" defer></script>
 </head>
 <body class="dark-theme">
@@ -651,7 +651,7 @@
                         <article class="forecast-summary-card glass-panel">
                             <span>Recent median monthly spend</span>
                             <strong id="forecast-median-spend">¥0</strong>
-                            <small id="forecast-median-spend-meta">Previous 3 complete months</small>
+                            <small id="forecast-median-spend-meta">Prior 3 calendar months</small>
                         </article>
                     </section>
 
@@ -680,6 +680,14 @@
                                         <strong id="forecast-scenario-median">—</strong>
                                     </div>
                                     <p id="forecast-scenario-median-detail">Uses recent median spending as a reference, not a prediction.</p>
+                                </article>
+
+                                <article class="forecast-scenario">
+                                    <div class="forecast-scenario-top">
+                                        <strong>Combined stress · 30d / current month</strong>
+                                        <strong id="forecast-scenario-combined">—</strong>
+                                    </div>
+                                    <p id="forecast-scenario-combined-detail">Known commitments plus additional historical-spend stress, with overlapping scheduled expenses counted once.</p>
                                 </article>
 
                                 <article class="forecast-scenario">
@@ -753,7 +761,7 @@
                             </div>
 
                             <div id="forecast-quality-warning" class="forecast-warning hidden"></div>
-                            <p class="forecast-method-note">Known-balance scenario applies only future-dated ledger entries. Historical scenario asks what happens if this month approaches the median net spending of the previous three complete calendar months. Runway divides the latest recorded balance by that median. No scenario assumes salary, stipend, or other income unless it already exists as a future-dated ledger entry.</p>
+                            <p class="forecast-method-note">Known-balance scenario applies recorded future-dated cash flow. Historical scenario tests this month's spending against the median of the prior three calendar months, only when each month has transaction records. Combined stress deducts known 30-day outflows and additional current-month spending without counting this month's scheduled expenses twice; unlike the known-only view, it ignores future income. Runway divides recorded balance by that median. Month activity does not prove complete reporting; none of these are precise forecasts.</p>
                         </section>
                     </div>
                 </section>

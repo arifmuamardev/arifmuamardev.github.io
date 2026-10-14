@@ -10,8 +10,10 @@
 
   let cash = [];
   let budgets = [];
+  let asOfOverride = null; // Node test harness only; never set in the browser.
 
   function todayTokyo() {
+    if (asOfOverride) return asOfOverride;
     const parts = Object.fromEntries(
       new Intl.DateTimeFormat("en-CA", {
         timeZone: "Asia/Tokyo",
@@ -140,7 +142,11 @@
     const current = currentMonthTokyo();
     return [-3, -2, -1].map(offset => {
       const month = shiftMonth(current, offset);
-      return { month, spend: monthSpend(month) };
+      return {
+        month,
+        spend: monthSpend(month),
+        hasRecords: postedRows().some(item => dateOf(item).slice(0, 7) === month)
+      };
     });
   }
 
@@ -201,13 +207,31 @@
     const impact30 = scheduledImpact(next30);
     const currentMonthSpend = monthSpend(currentMonthTokyo());
     const history = historicalMonths();
-    const medianSpend = median(history.map(row => row.spend));
-    const remainingToMedian = Math.max(0, medianSpend - currentMonthSpend);
+    // Missing calendar months are unknown, not zero spending.
+    const monthsWithRecords = history.filter(row => row.hasRecords).length;
+    const medianSpend = monthsWithRecords === 3
+      ? median(history.map(row => row.spend))
+      : null;
+    const remainingToMedian = medianSpend === null
+      ? null
+      : Math.max(0, medianSpend - currentMonthSpend);
     const knownBalance30 = balance
       ? balance.value + impact30.inflow - impact30.outflow
       : null;
-    const historicalScenarioBalance = balance
+    const historicalScenarioBalance = balance && remainingToMedian !== null
       ? balance.value - remainingToMedian
+      : null;
+
+    // Current-month scheduled outflows already contribute toward the monthly
+    // historical benchmark. Subtract them only once in the combined stress.
+    const currentMonthKnownOutflow = scheduledImpact(
+      next30.filter(item => dateOf(item).slice(0, 7) === currentMonthTokyo())
+    ).outflow;
+    const additionalStressOutflow = medianSpend === null
+      ? null
+      : Math.max(0, medianSpend - currentMonthSpend - currentMonthKnownOutflow);
+    const combinedStressBalance = balance && additionalStressOutflow !== null
+      ? balance.value - impact30.outflow - additionalStressOutflow
       : null;
     const runway = balance && medianSpend > 0
       ? balance.value / medianSpend
@@ -218,10 +242,10 @@
 
     let confidence = "Limited";
     let confidenceTone = "limited";
-    if (freshnessDays !== null && freshnessDays <= 3 && history.filter(row => row.spend > 0).length === 3) {
+    if (monthsWithRecords === 3 && freshnessDays !== null && freshnessDays <= 3) {
       confidence = "Moderate";
       confidenceTone = "moderate";
-    } else if (freshnessDays !== null && freshnessDays <= 7) {
+    } else if (monthsWithRecords === 3 && freshnessDays !== null && freshnessDays <= 7) {
       confidence = "Cautious";
       confidenceTone = "cautious";
     }
@@ -236,9 +260,13 @@
       currentMonthSpend,
       history,
       medianSpend,
+      monthsWithRecords,
       remainingToMedian,
       knownBalance30,
       historicalScenarioBalance,
+      currentMonthKnownOutflow,
+      additionalStressOutflow,
+      combinedStressBalance,
       runway,
       latestPosted,
       freshnessDays,
@@ -253,10 +281,10 @@
     if (el) el.textContent = String(value);
   }
 
-  function setMoney(id, value, fallback = "—") {
+  function setMoney(id, value, fallback = "—", digits = 0) {
     setText(id, value === null || value === undefined
       ? fallback
-      : `${value < 0 ? "−" : ""}¥${formatMoney(Math.abs(value))}`
+      : `${value < 0 ? "−" : ""}¥${formatMoney(Math.abs(value), digits)}`
     );
   }
 
@@ -267,16 +295,18 @@
       : "No running balance available"
     );
 
-    setMoney("forecast-known-30d", model.impact30.outflow);
+    setMoney("forecast-known-30d", model.impact30.outflow, "—", 2);
     setText("forecast-known-30d-meta",
       `${model.next30.length} scheduled item${model.next30.length === 1 ? "" : "s"} · +¥${formatMoney(model.impact30.inflow)} known inflow`
     );
 
-    setMoney("forecast-known-balance", model.knownBalance30);
+    setMoney("forecast-known-balance", model.knownBalance30, "—", 2);
     setText("forecast-known-balance-meta", "Recorded balance after known 30-day cash-flow items");
 
     setMoney("forecast-median-spend", model.medianSpend);
-    setText("forecast-median-spend-meta", "Median net spending across the previous 3 complete months");
+    setText("forecast-median-spend-meta", model.medianSpend === null
+      ? "Insufficient records across the prior 3 calendar months"
+      : "Median of the prior 3 calendar months with recorded activity");
 
     const badge = document.getElementById("forecast-confidence");
     if (badge) {
@@ -286,16 +316,22 @@
   }
 
   function renderScenarios(model) {
-    setMoney("forecast-scenario-known", model.knownBalance30);
+    setMoney("forecast-scenario-known", model.knownBalance30, "—", 2);
     setText("forecast-scenario-known-detail",
       `Uses only ${model.next30.length} future-dated ledger item${model.next30.length === 1 ? "" : "s"} within 30 days. No unscheduled spending is assumed.`
     );
 
     setMoney("forecast-scenario-median", model.historicalScenarioBalance);
     setText("forecast-scenario-median-detail",
-      model.medianSpend > 0
+      model.medianSpend !== null
         ? `Stress-test balance if current-month spending rises from ¥${formatMoney(model.currentMonthSpend)} toward the recent 3-month median of ¥${formatMoney(model.medianSpend)}. Future income is ignored.`
-        : "Not enough historical spending data for this scenario."
+        : "Unavailable: at least one of the prior three months has no recorded transactions."
+    );
+
+    setMoney("forecast-scenario-combined", model.combinedStressBalance, "—", 2);
+    setText("forecast-scenario-combined-detail", model.combinedStressBalance === null
+      ? "Unavailable until all three prior calendar months have transaction records."
+      : `Deducts ¥${formatMoney(model.impact30.outflow, 2)} known 30-day outflows plus ¥${formatMoney(model.additionalStressOutflow, 2)} extra current-month spending. ¥${formatMoney(model.currentMonthKnownOutflow, 2)} of the scheduled outflow already counts toward the monthly benchmark. No double-counting or future income assumed.`
     );
 
     setText("forecast-runway", model.runway === null ? "—" : `${model.runway.toFixed(1)} months`);
@@ -377,18 +413,20 @@
       const title = document.createElement("strong");
       title.textContent = monthLabel(row.month);
       const meta = document.createElement("span");
-      meta.textContent = row.current ? "Posted MTD" : "Complete month";
+      meta.textContent = row.current ? "Posted MTD" : row.hasRecords ? "Recorded month" : "No records · excluded";
       label.append(title, meta);
 
       const bar = document.createElement("div");
       bar.className = "forecast-history-bar";
       const fill = document.createElement("span");
-      fill.style.width = `${Math.max(1, row.spend / maxSpend * 100)}%`;
+      fill.style.width = !row.current && !row.hasRecords
+        ? "0%"
+        : `${Math.max(1, row.spend / maxSpend * 100)}%`;
       if (row.current) fill.classList.add("current");
       bar.appendChild(fill);
 
       const value = document.createElement("strong");
-      value.textContent = `¥${formatMoney(row.spend)}`;
+      value.textContent = !row.current && !row.hasRecords ? "—" : `¥${formatMoney(row.spend)}`;
 
       article.append(label, bar, value);
       list.appendChild(article);
@@ -404,7 +442,7 @@
           : `${model.freshnessDays} day${model.freshnessDays === 1 ? "" : "s"} since latest posted transaction`
     );
     setText("forecast-history-basis",
-      `${model.history.filter(row => row.spend > 0).length}/3 prior complete months have spending data`
+      `${model.monthsWithRecords}/3 prior calendar months contain transactions (not proof of complete reporting)`
     );
     setText("forecast-scheduled-count",
       `${model.next90.length} known future item${model.next90.length === 1 ? "" : "s"} within 90 days`
@@ -412,11 +450,15 @@
 
     const warning = document.getElementById("forecast-quality-warning");
     if (warning) {
-      const stale = model.freshnessDays !== null && model.freshnessDays > 7;
-      warning.classList.toggle("hidden", !stale);
-      if (stale) {
-        warning.textContent = `Forecast confidence is limited because the latest posted transaction is ${model.latestPosted || "not available"}, ${model.freshnessDays} days before today.`;
-      }
+      const stale = model.freshnessDays === null || model.freshnessDays > 7;
+      const missing = model.history.filter(row => !row.hasRecords).map(row => monthLabel(row.month));
+      warning.classList.toggle("hidden", !(stale || missing.length));
+      const notes = [];
+      if (stale) notes.push(model.freshnessDays === null
+        ? "No dated posted transactions are available."
+        : `Latest posted transaction is ${model.latestPosted}, ${model.freshnessDays} days before today.`);
+      if (missing.length) notes.push(`Missing ledger records for ${missing.join(", ")}; historical scenarios are disabled rather than treating missing months as zero.`);
+      warning.textContent = notes.join(" ");
     }
   }
 
@@ -446,9 +488,25 @@
     render();
   }
 
-  window.FinanceForecast = {
-    init,
-    setData,
-    render
-  };
+  if (typeof window !== "undefined") {
+    window.FinanceForecast = { init, setData, render };
+  }
+
+  // Test-only adapter, available in Node and never exposed to the browser.
+  if (typeof module !== "undefined" && module.exports) {
+    module.exports = {
+      snapshotForTest({ rows = [], budgetRows = [], asOf = "2026-10-14" } = {}) {
+        cash = rows;
+        budgets = budgetRows;
+        asOfOverride = asOf;
+        try {
+          return calculate();
+        } finally {
+          cash = [];
+          budgets = [];
+          asOfOverride = null;
+        }
+      }
+    };
+  }
 })();
