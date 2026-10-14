@@ -16,15 +16,17 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.min.js"></script>
     <!-- Public Neon endpoints live in config.js; database credentials never ship to the browser. -->
     <script src="config.js?v=4.0.1"></script>
-    <script type="module" src="cloud.js?v=4.6.0"></script>
+    <script type="module" src="cloud.js?v=4.8.0"></script>
     <link rel="stylesheet" href="styles.css?v=4.3.0">
     <link rel="stylesheet" href="features/transaction-editor.css?v=4.4.0">
     <link rel="stylesheet" href="features/transaction-history.css?v=4.5.0">
     <link rel="stylesheet" href="features/data-tools.css?v=4.7.0">
+    <link rel="stylesheet" href="features/monthly-budget.css?v=4.8.0">
     <script src="features/transaction-editor.js?v=4.7.0" defer></script>
     <script src="features/transaction-history.js?v=4.5.0" defer></script>
     <script src="features/data-tools.js?v=4.7.0" defer></script>
-    <script src="app.js?v=4.7.0" defer></script>
+    <script src="features/monthly-budget.js?v=4.8.0" defer></script>
+    <script src="app.js?v=4.8.0" defer></script>
 </head>
 <body class="dark-theme">
     <div id="auth-gate" class="auth-gate" aria-live="polite">
@@ -78,6 +80,7 @@
                     <button class="nav-btn active" data-target="view-balance"><i class="fa-solid fa-house"></i><span>Home</span></button>
                     <button class="nav-btn" data-target="view-transactions"><i class="fa-solid fa-list-check"></i><span>Transactions</span></button>
                     <button class="nav-btn" data-target="view-analytics"><i class="fa-solid fa-chart-pie"></i><span>Analytics</span></button>
+                    <button class="nav-btn" data-target="view-budget"><i class="fa-solid fa-bullseye"></i><span>Budget</span></button>
                 </div>
 
                 <div class="sidebar-category">
@@ -381,6 +384,93 @@
                         <div class="chart-wrapper">
                             <canvas id="category-pie-chart"></canvas>
                         </div>
+                    </div>
+                </section>
+            </div>
+
+            <div id="view-budget" class="dashboard-view hidden">
+                <section class="budget-workspace">
+                    <div class="budget-hero glass-panel">
+                        <div>
+                            <span class="home-section-kicker">Plan vs actual</span>
+                            <h2>Monthly Budget</h2>
+                            <p>Set category targets for a month, compare them with posted spending, and use recent history only as an optional reference—not an automatic decision.</p>
+                        </div>
+                        <label class="budget-month-control">
+                            <span>Budget month</span>
+                            <input type="month" id="budget-month">
+                        </label>
+                    </div>
+
+                    <section class="budget-summary-grid" aria-label="Budget summary">
+                        <article class="budget-summary-card glass-panel">
+                            <span>Planned</span>
+                            <strong id="budget-planned-total">¥0</strong>
+                            <small id="budget-month-title">Current month</small>
+                        </article>
+                        <article class="budget-summary-card glass-panel">
+                            <span>Spent within budgeted categories</span>
+                            <strong id="budget-spent-total">¥0</strong>
+                            <small id="budget-actual-scope">Posted transactions</small>
+                        </article>
+                        <article class="budget-summary-card glass-panel">
+                            <span>Remaining</span>
+                            <strong id="budget-remaining-total">¥0</strong>
+                            <small>Planned minus actual</small>
+                        </article>
+                        <article class="budget-summary-card glass-panel">
+                            <span>Actual spending covered</span>
+                            <strong id="budget-coverage">0%</strong>
+                            <small>Share of actual expenses inside budgeted categories</small>
+                        </article>
+                    </section>
+
+                    <div class="budget-grid">
+                        <section class="budget-panel glass-panel">
+                            <div class="budget-panel-head">
+                                <div>
+                                    <span class="home-section-kicker">Saved targets</span>
+                                    <h3>Category budgets</h3>
+                                </div>
+                                <span>Owner-only targets</span>
+                            </div>
+
+                            <div id="budget-target-list" class="budget-target-list">
+                                <div class="budget-empty">No targets loaded yet.</div>
+                            </div>
+
+                            <form id="budget-add-form" class="budget-add-form">
+                                <label class="budget-field">
+                                    <span>Category</span>
+                                    <select id="budget-category" required>
+                                        <option value="">Choose category</option>
+                                    </select>
+                                </label>
+                                <label class="budget-field">
+                                    <span>Monthly target (JPY)</span>
+                                    <input type="number" id="budget-amount" min="1" step="100" inputmode="decimal" placeholder="10000" required>
+                                </label>
+                                <button type="submit" id="budget-add-save" class="budget-add-btn">
+                                    <i class="fa-solid fa-plus"></i>
+                                    Save target
+                                </button>
+                                <div id="budget-suggestion-hint" class="budget-hint">Choose a category to see its recent-history suggestion.</div>
+                            </form>
+                        </section>
+
+                        <section class="budget-panel glass-panel">
+                            <div class="budget-panel-head">
+                                <div>
+                                    <span class="home-section-kicker">Optional reference</span>
+                                    <h3>3-month suggestions</h3>
+                                </div>
+                                <span>Never auto-saved</span>
+                            </div>
+                            <div id="budget-suggestion-list" class="budget-suggestion-list">
+                                <div class="budget-empty">Calculating historical suggestions…</div>
+                            </div>
+                            <p class="budget-method-note">Suggestions use the three calendar months immediately before the selected month and divide by three, including months with zero spending. “Others” is intentionally excluded.</p>
+                        </section>
                     </div>
                 </section>
             </div>
