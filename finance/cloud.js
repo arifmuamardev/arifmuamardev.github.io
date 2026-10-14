@@ -141,12 +141,13 @@ import { createClient } from "https://cdn.jsdelivr.net/npm/@neondatabase/neon-js
       throw new Error("This Google account is not authorized for this finance dashboard.");
     }
 
-    const [cash, withdrawals, bni, muamalat, gopay] = await Promise.all([
+    const [cash, withdrawals, bni, muamalat, gopay, budgets] = await Promise.all([
       fetchAll("cash_transactions", [{ column: "tanggal" }, { column: "id" }]),
       fetchAll("atm_transactions", [{ column: "tanggal" }, { column: "id" }]),
       fetchAll("bni_transactions", [{ column: "date" }, { column: "id" }]),
       fetchAll("muamalat_transactions", [{ column: "date" }, { column: "id" }]),
-      fetchAll("gopay_transactions", [{ column: "date" }, { column: "id" }])
+      fetchAll("gopay_transactions", [{ column: "date" }, { column: "id" }]),
+      fetchAll("monthly_budgets", [{ column: "month_start" }, { column: "category" }])
     ]);
 
     return {
@@ -155,6 +156,7 @@ import { createClient } from "https://cdn.jsdelivr.net/npm/@neondatabase/neon-js
       bni,
       muamalat,
       gopay,
+      budgets,
       settings: settingsResult.data
     };
   }
@@ -204,6 +206,38 @@ import { createClient } from "https://cdn.jsdelivr.net/npm/@neondatabase/neon-js
       p_note: String(note || "").trim()
     });
 
+    if (error) throw error;
+    return data;
+  }
+
+  async function saveMonthlyBudget({ month, category, amount }) {
+    const neon = getClient();
+    if (!neon) throw new Error("Neon is not configured.");
+    const numericAmount = Number(amount);
+    if (!month) throw new Error("Budget month is required.");
+    if (!String(category || "").trim()) throw new Error("Budget category is required.");
+    if (!Number.isFinite(numericAmount) || numericAmount <= 0) {
+      throw new Error("Budget amount must be greater than zero.");
+    }
+
+    const monthDate = /^\d{4}-\d{2}$/.test(month) ? `${month}-01` : month;
+    const { data, error } = await neon.rpc("save_monthly_budget", {
+      p_month: monthDate,
+      p_category: String(category).trim(),
+      p_amount: numericAmount
+    });
+    if (error) throw error;
+    return data;
+  }
+
+  async function removeMonthlyBudget(id) {
+    const neon = getClient();
+    if (!neon) throw new Error("Neon is not configured.");
+    const budgetId = Number(id);
+    if (!Number.isFinite(budgetId)) throw new Error("Budget target is invalid.");
+    const { data, error } = await neon.rpc("remove_monthly_budget", {
+      p_budget_id: budgetId
+    });
     if (error) throw error;
     return data;
   }
@@ -285,6 +319,8 @@ import { createClient } from "https://cdn.jsdelivr.net/npm/@neondatabase/neon-js
     loadAll,
     reconcile,
     saveTransaction,
+    saveMonthlyBudget,
+    removeMonthlyBudget,
     getTransactionHistory,
     getAuditCount,
     getAllAuditHistory,
