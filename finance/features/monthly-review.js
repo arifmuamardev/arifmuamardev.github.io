@@ -61,6 +61,9 @@
   }
 
   function isExcluded(item) {
+    const classifier=typeof window!=="undefined" ? window.FinanceFlowClassifier :
+      (typeof require!=="undefined" ? require("./flow-classifier.js") : null);
+    if(classifier)return !["spending","income"].includes(classifier.classify(item).kind);
     return EXCLUDED_ITEMS.has(itemName(item));
   }
 

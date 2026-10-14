@@ -315,12 +315,18 @@ function updateKPIs(filteredData) {
             balanceVal = lastGlobalCash ? lastGlobalCash.saldo : 0;
         }
         
-        filteredData.forEach(item => {
-            if (!isExcludedTransfer(item.item_normalized)) {
-                incomeVal += item.pemasukan;
-                spendingVal += item.pengeluaran;
-            }
-        });
+        const summary = window.FinanceFlowClassifier?.tally(filteredData);
+        if (summary) {
+            incomeVal = summary.income;
+            spendingVal = summary.spending;
+        } else {
+            filteredData.forEach(item => {
+                if (!isExcludedTransfer(item.item_normalized)) {
+                    incomeVal += Number(item.pemasukan) || 0;
+                    spendingVal += Number(item.pengeluaran) || 0;
+                }
+            });
+        }
     } else {
         const lastGlobalCash = [...cashData].reverse().find(item => item.saldo !== null && item.saldo !== undefined);
         balanceVal = lastGlobalCash ? lastGlobalCash.saldo : 0;
@@ -411,13 +417,20 @@ function updateHomeCommandCenter() {
         Number(String(item?.tanggal || "").slice(8, 10)) <= currentDay
     );
 
-    const summarize = rows => rows.reduce((acc, item) => {
-        if (isExcludedTransfer(item.item_normalized)) return acc;
-        acc.income += Number(item.pemasukan) || 0;
-        acc.spending += Number(item.pengeluaran) || 0;
-        if ((Number(item.pemasukan) || 0) > 0) acc.incomeEntries += 1;
-        return acc;
-    }, { income: 0, spending: 0, incomeEntries: 0 });
+    const summarize = rows => {
+        const model = window.FinanceFlowClassifier?.tally(rows);
+        if (model) return {
+            income:model.income,spending:model.spending,
+            incomeEntries:rows.filter(item=>window.FinanceFlowClassifier.classify(item).kind==="income").length
+        };
+        return rows.reduce((acc,item)=>{
+            if(isExcludedTransfer(item.item_normalized))return acc;
+            acc.income+=Number(item.pemasukan)||0;
+            acc.spending+=Number(item.pengeluaran)||0;
+            if((Number(item.pemasukan)||0)>0)acc.incomeEntries++;
+            return acc;
+        },{income:0,spending:0,incomeEntries:0});
+    };
 
     const current = summarize(currentMonth);
     const previous = summarize(previousMonth);
@@ -1399,6 +1412,7 @@ function setupTransactionWorkspace() {
     window.FinanceAccountEvidence?.init();
     window.FinanceVisaReview?.init();
     window.FinanceTokopediaProof?.init();
+    window.FinanceFlowAudit?.init();
 
     window.addEventListener("budget:data-tools-error", event => {
         showToast(event.detail?.message || "Data export failed.", "error");
@@ -1675,6 +1689,7 @@ async function fetchAndInitData() {
             budgets: payload.budgets || []
         });
         window.FinanceIntegrity?.setData({ cash: cashData });
+        window.FinanceFlowAudit?.setData({ cash: cashData });
         window.FinanceAccountEvidence?.setData({
             cash: cashData,
             withdrawals: withdrawalsData,
@@ -1760,6 +1775,9 @@ function initNavigation() {
                 } else if (targetViewId === "view-integrity") {
                     topBarTitle.textContent = "Data Integrity";
                     topBarDesc.textContent = "Review potential ledger issues without changing financial records";
+                } else if (targetViewId === "view-flow-audit") {
+                    topBarTitle.textContent = "Spending vs Money Movement";
+                    topBarDesc.textContent = "Separate consumption from transfers, card settlements, lending and adjustments";
                 } else if (targetViewId === "view-transactions") {
                     topBarTitle.textContent = "Transactions";
                     topBarDesc.textContent = "Search, filter, and inspect your complete ledger";
@@ -1853,6 +1871,8 @@ function initNavigation() {
                 window.FinanceForecast?.render();
             } else if (targetViewId === "view-integrity") {
                 window.FinanceIntegrity?.render();
+            } else if (targetViewId === "view-flow-audit") {
+                window.FinanceFlowAudit?.render();
             } else if (targetViewId === "view-visa-review") {
                 window.FinanceVisaReview?.render();
             } else if (targetViewId === "view-tokopedia-proof") {
