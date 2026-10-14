@@ -7,6 +7,7 @@
     bni: [],
     muamalat: [],
     gopay: [],
+    audit: [],
     settings: {}
   };
 
@@ -184,6 +185,7 @@
     setText("data-duplicate-count", formatNumber(a.duplicateGroups.length));
     setText("data-missing-count", formatNumber(a.missingEssentials.length));
     setText("data-others-count", formatNumber(a.othersRows.length));
+    setText("data-audit-count", formatNumber((payload.audit || []).length));
     setText("data-range", a.earliestPosted && a.latestPosted ? `${a.earliestPosted} → ${a.latestPosted}` : "—");
     setText("data-latest-posted", a.latestPosted || "—");
 
@@ -233,7 +235,8 @@
         atm_transactions: payload.withdrawals || [],
         bni_transactions: payload.bni || [],
         muamalat_transactions: payload.muamalat || [],
-        gopay_transactions: payload.gopay || []
+        gopay_transactions: payload.gopay || [],
+        cash_transaction_audit: payload.audit || []
       },
       app_settings: payload.settings || {}
     };
@@ -267,6 +270,7 @@
       bni: nextPayload?.bni || [],
       muamalat: nextPayload?.muamalat || [],
       gopay: nextPayload?.gopay || [],
+      audit: nextPayload?.audit || [],
       settings: nextPayload?.settings || {}
     };
     render();
