@@ -18,6 +18,8 @@ let activeFilters = {
     search: ""
 };
 let activePlatformFilter = "all";
+let activeTransactionPaymentFilter = "all";
+let activeTransactionFlowFilter = "all";
 let controlsInitialized = false;
 
 // Chart.js Instances
@@ -644,27 +646,126 @@ function getCategoryColor(categoryName) {
 }
 
 // Render the Ledger Table rows
+function getTransactionViewData(filteredData) {
+    return filteredData.filter(item => {
+        if (activeTransactionPaymentFilter !== "all" && item.payment_type !== activeTransactionPaymentFilter) {
+            return false;
+        }
+
+        const income = Number(item.pemasukan) || 0;
+        const expense = Number(item.pengeluaran) || 0;
+        if (activeTransactionFlowFilter === "income" && !(income > 0 || expense < 0)) return false;
+        if (activeTransactionFlowFilter === "expense" && !(expense > 0)) return false;
+        return true;
+    });
+}
+
+function updateTransactionSummary(rows) {
+    const countEl = document.getElementById("transaction-summary-count");
+    const incomeEl = document.getElementById("transaction-summary-income");
+    const expenseEl = document.getElementById("transaction-summary-expense");
+    const netEl = document.getElementById("transaction-summary-net");
+    if (!countEl || !incomeEl || !expenseEl || !netEl) return;
+
+    const summary = rows.reduce((acc, item) => {
+        if (isExcludedTransfer(item.item_normalized)) return acc;
+        const income = Number(item.pemasukan) || 0;
+        const expense = Number(item.pengeluaran) || 0;
+        acc.income += income;
+        acc.expense += expense;
+        return acc;
+    }, { income: 0, expense: 0 });
+
+    const net = summary.income - summary.expense;
+    countEl.textContent = String(rows.length);
+    incomeEl.textContent = `¥${formatCurrency(summary.income)}`;
+    expenseEl.textContent = `¥${formatCurrency(summary.expense)}`;
+    netEl.textContent = `${net < 0 ? "−" : ""}¥${formatCurrency(Math.abs(net))}`;
+    netEl.classList.toggle("income", net > 0);
+    netEl.classList.toggle("expense", net < 0);
+}
+
+function closeTransactionDrawer() {
+    const drawer = document.getElementById("transaction-drawer");
+    const scrim = document.getElementById("transaction-drawer-scrim");
+    drawer?.classList.remove("open");
+    drawer?.setAttribute("aria-hidden", "true");
+    scrim?.classList.add("hidden");
+}
+
+function openTransactionDrawer(item) {
+    if (!item) return;
+    const drawer = document.getElementById("transaction-drawer");
+    const scrim = document.getElementById("transaction-drawer-scrim");
+    if (!drawer || !scrim) return;
+
+    const income = Number(item.pemasukan) || 0;
+    const expense = Number(item.pengeluaran) || 0;
+    const isIncome = income > 0 || expense < 0;
+    const isExpense = expense > 0;
+    const amount = income > 0 ? income : Math.abs(expense);
+    const flow = income > 0 ? "Income" : expense < 0 ? "Refund / adjustment" : expense > 0 ? "Expense" : "Neutral";
+    const title = item.item_normalized || item.item || "Transaction";
+
+    const titleEl = document.getElementById("transaction-drawer-title");
+    const subtitleEl = document.getElementById("transaction-drawer-subtitle");
+    const flowEl = document.getElementById("transaction-drawer-flow");
+    const amountEl = document.getElementById("transaction-drawer-amount");
+    const dateEl = document.getElementById("transaction-drawer-date");
+
+    if (titleEl) titleEl.textContent = title;
+    if (subtitleEl) subtitleEl.textContent = item.kategori_normalized || item.kategori || "Ledger record";
+    if (flowEl) flowEl.textContent = flow;
+    if (amountEl) {
+        amountEl.textContent = amount ? `${isIncome ? "+" : isExpense ? "−" : ""}¥${formatCurrency(amount)}` : "—";
+        amountEl.classList.toggle("income", isIncome);
+        amountEl.classList.toggle("expense", isExpense);
+    }
+    if (dateEl) dateEl.textContent = item.tanggal || "—";
+
+    const values = {
+        "transaction-detail-category": item.kategori_normalized || item.kategori || "—",
+        "transaction-detail-payment": item.payment_type === "cashless" ? "Digital / cashless" : item.payment_type === "cash" ? "Cash" : (item.payment_type || "—"),
+        "transaction-detail-store": item.tempat || "—",
+        "transaction-detail-balance": item.saldo !== null && item.saldo !== undefined ? `¥${formatCurrency(item.saldo)}` : "—",
+        "transaction-detail-original": item.item || "—",
+        "transaction-detail-note": item.note || "—",
+        "transaction-detail-id": item.id !== null && item.id !== undefined ? `#${item.id}` : "—"
+    };
+    Object.entries(values).forEach(([id, value]) => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = String(value);
+    });
+
+    scrim.classList.remove("hidden");
+    drawer.classList.add("open");
+    drawer.setAttribute("aria-hidden", "false");
+    document.getElementById("transaction-drawer-close")?.focus();
+}
+
 function updateLedgerTable(filteredData) {
     const tableBody = document.getElementById("ledger-table-body");
     const countEl = document.getElementById("transaction-count");
-    
-    tableBody.innerHTML = "";
-    countEl.textContent = `Showing ${filteredData.length} transactions`;
+    if (!tableBody || !countEl) return;
 
-    if (filteredData.length === 0) {
-        tableBody.innerHTML = `<tr><td colspan="8" style="text-align: center; padding: 2rem; color: var(--text-muted);">No transactions matching current filters.</td></tr>`;
+    const transactionRows = getTransactionViewData(filteredData);
+    updateTransactionSummary(transactionRows);
+
+    tableBody.innerHTML = "";
+    countEl.textContent = `Showing ${transactionRows.length} transaction${transactionRows.length === 1 ? "" : "s"}`;
+
+    if (transactionRows.length === 0) {
+        tableBody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:2rem;color:var(--text-muted);">No transactions match these filters.</td></tr>';
         return;
     }
 
-    // Sort the filtered data based on currentSort state
-    const sortedData = [...filteredData].sort((a, b) => {
+    const sortedData = [...transactionRows].sort((a, b) => {
         let valA = a[currentSort.column];
         let valB = b[currentSort.column];
 
-        // String comparison case-insensitive
         if (typeof valA === "string") {
             valA = valA.toLowerCase();
-            valB = valB.toLowerCase();
+            valB = typeof valB === "string" ? valB.toLowerCase() : valB;
         }
 
         if (valA < valB) return currentSort.direction === "asc" ? -1 : 1;
@@ -674,62 +775,73 @@ function updateLedgerTable(filteredData) {
 
     sortedData.forEach(item => {
         const row = document.createElement("tr");
-        
+        row.tabIndex = 0;
+        row.setAttribute("role", "button");
+        row.setAttribute("aria-label", `Open transaction details for ${item.item_normalized || item.item || "transaction"}`);
+
         const isTransfer = isExcludedTransfer(item.item_normalized);
-        
+        const income = Number(item.pemasukan) || 0;
+        const expense = Number(item.pengeluaran) || 0;
+
         let incomeTd = "-";
         let expenseTd = "-";
-        
-        if (item.pemasukan > 0) {
-            if (isTransfer) {
-                incomeTd = `<span class="badge badge-transfer">⇄ ¥${formatCurrency(item.pemasukan)}</span>`;
-            } else {
-                incomeTd = `<span class="badge badge-income">+ ¥${formatCurrency(item.pemasukan)}</span>`;
-            }
+
+        if (income > 0) {
+            incomeTd = isTransfer
+                ? `<span class="badge badge-transfer">⇄ ¥${formatCurrency(income)}</span>`
+                : `<span class="badge badge-income">+ ¥${formatCurrency(income)}</span>`;
         }
-        
-        if (item.pengeluaran !== 0 && item.pengeluaran !== null && item.pengeluaran !== undefined) {
+
+        if (expense !== 0) {
             if (isTransfer) {
-                expenseTd = `<span class="badge badge-transfer">⇄ ¥${formatCurrency(item.pengeluaran)}</span>`;
-            } else if (item.pengeluaran < 0) {
-                expenseTd = `<span class="badge badge-income" style="background: rgba(16, 185, 129, 0.15); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.25);">+ ¥${formatCurrency(Math.abs(item.pengeluaran))}</span>`;
+                expenseTd = `<span class="badge badge-transfer">⇄ ¥${formatCurrency(expense)}</span>`;
+            } else if (expense < 0) {
+                expenseTd = `<span class="badge badge-income" style="background:rgba(16,185,129,.15);color:#10b981;border:1px solid rgba(16,185,129,.25);">+ ¥${formatCurrency(Math.abs(expense))}</span>`;
             } else {
-                expenseTd = `<span class="badge badge-expense">- ¥${formatCurrency(item.pengeluaran)}</span>`;
+                expenseTd = `<span class="badge badge-expense">- ¥${formatCurrency(expense)}</span>`;
             }
         }
 
-        const typeBadge = item.payment_type === 'cash' 
-            ? `<span class="badge badge-type-cash" style="font-size: 0.65rem; padding: 0.1rem 0.35rem; margin-right: 0.5rem;"><i class="fa-solid fa-money-bill-1"></i> Cash</span>`
-            : `<span class="badge badge-type-cashless" style="font-size: 0.65rem; padding: 0.1rem 0.35rem; margin-right: 0.5rem;"><i class="fa-solid fa-credit-card"></i> Digital</span>`;
-            
-        let subtextHtml = '';
-        if (item.item !== item.item_normalized) {
+        const typeBadge = item.payment_type === "cash"
+            ? '<span class="badge badge-type-cash" style="font-size:.65rem;padding:.1rem .35rem;margin-right:.5rem;"><i class="fa-solid fa-money-bill-1"></i> Cash</span>'
+            : '<span class="badge badge-type-cashless" style="font-size:.65rem;padding:.1rem .35rem;margin-right:.5rem;"><i class="fa-solid fa-credit-card"></i> Digital</span>';
+
+        let subtextHtml = "";
+        if (item.item && item.item !== item.item_normalized) {
             subtextHtml += `<div class="table-subtext">${escapeHtml(item.item)}</div>`;
         }
         if (item.note) {
-            subtextHtml += `<div class="table-subtext" style="color: var(--color-primary); font-style: italic; margin-top: 2px;"><i class="fa-solid fa-sticky-note"></i> ${escapeHtml(item.note)}</div>`;
+            subtextHtml += `<div class="table-subtext" style="color:var(--color-primary);font-style:italic;margin-top:2px;"><i class="fa-solid fa-sticky-note"></i> ${escapeHtml(item.note)}</div>`;
         }
 
-        const saldoTd = (item.saldo !== null && item.saldo !== undefined && item.payment_type !== 'cashless')
+        const saldoTd = item.saldo !== null && item.saldo !== undefined && item.payment_type !== "cashless"
             ? `¥${formatCurrency(item.saldo)}`
-            : `<span style="color: var(--text-muted); font-style: italic; font-weight: 400;">-</span>`;
-            
+            : '<span style="color:var(--text-muted);font-style:italic;font-weight:400;">-</span>';
+
         row.innerHTML = `
-            <td style="color: var(--text-muted); font-family: monospace; font-weight: 500;">#${item.id}</td>
-            <td style="white-space: nowrap;">${item.tanggal}</td>
+            <td class="transaction-col-id" style="color:var(--text-muted);font-family:monospace;font-weight:500;">#${item.id}</td>
+            <td style="white-space:nowrap;">${escapeHtml(item.tanggal)}</td>
             <td>
-                <div style="font-weight: 600; color: var(--text-primary);">${escapeHtml(item.item_normalized)}</div>
+                <div style="font-weight:600;color:var(--text-primary);">${escapeHtml(item.item_normalized || item.item || "Transaction")}</div>
                 ${subtextHtml}
             </td>
             <td>
-                ${getCategoryBadgeHtml(item.kategori_normalized)}
-                <div style="margin-top: 4px;">${typeBadge}</div>
+                ${getCategoryBadgeHtml(item.kategori_normalized || item.kategori)}
+                <div style="margin-top:4px;">${typeBadge}</div>
             </td>
-            <td>${item.tempat ? escapeHtml(item.tempat) : '<span style="color: var(--text-muted); font-style: italic;">N/A</span>'}</td>
+            <td class="transaction-col-store">${item.tempat ? escapeHtml(item.tempat) : '<span style="color:var(--text-muted);font-style:italic;">N/A</span>'}</td>
             <td class="amount-col">${incomeTd}</td>
             <td class="amount-col">${expenseTd}</td>
-            <td class="amount-col" style="font-weight: 600; color: var(--text-primary);">${saldoTd}</td>
+            <td class="amount-col transaction-col-balance" style="font-weight:600;color:var(--text-primary);">${saldoTd}</td>
         `;
+
+        row.addEventListener("click", () => openTransactionDrawer(item));
+        row.addEventListener("keydown", event => {
+            if (event.key === "Enter" || event.key === " ") {
+                event.preventDefault();
+                openTransactionDrawer(item);
+            }
+        });
         tableBody.appendChild(row);
     });
 }
@@ -1164,6 +1276,8 @@ function setupFilters() {
             activeFilters.category = "all";
             activeFilters.search = "";
             activePlatformFilter = "all";
+            activeTransactionPaymentFilter = "all";
+            activeTransactionFlowFilter = "all";
             
             // Reset values visually
             monthSelects.forEach(s => s.value = "all");
@@ -1171,6 +1285,12 @@ function setupFilters() {
             searchInputs.forEach(s => s.value = "");
             const platformSelect = document.querySelector(".sync-filter-platform");
             if (platformSelect) platformSelect.value = "all";
+            document.querySelectorAll("[data-transaction-payment]").forEach(chip => {
+                chip.classList.toggle("active", chip.dataset.transactionPayment === "all");
+            });
+            document.querySelectorAll("[data-transaction-flow]").forEach(chip => {
+                chip.classList.toggle("active", chip.dataset.transactionFlow === "all");
+            });
             
             // Reset sort headers
             resetTableSortHeaders("ledger-table");
@@ -1206,6 +1326,46 @@ function setupFilters() {
             updateOnlineShoppingPage(filtered);
         });
     }
+}
+
+
+function setupTransactionWorkspace() {
+    document.querySelectorAll("[data-transaction-payment]").forEach(chip => {
+        chip.addEventListener("click", () => {
+            activeTransactionPaymentFilter = chip.dataset.transactionPayment || "all";
+            document.querySelectorAll("[data-transaction-payment]").forEach(item => {
+                item.classList.toggle("active", item === chip);
+            });
+            updateLedgerTable(getFilteredData());
+        });
+    });
+
+    document.querySelectorAll("[data-transaction-flow]").forEach(chip => {
+        chip.addEventListener("click", () => {
+            activeTransactionFlowFilter = chip.dataset.transactionFlow || "all";
+            document.querySelectorAll("[data-transaction-flow]").forEach(item => {
+                item.classList.toggle("active", item === chip);
+            });
+            updateLedgerTable(getFilteredData());
+        });
+    });
+
+    const drawerClose = document.getElementById("transaction-drawer-close");
+    const drawerScrim = document.getElementById("transaction-drawer-scrim");
+    drawerClose?.addEventListener("click", closeTransactionDrawer);
+    drawerScrim?.addEventListener("click", closeTransactionDrawer);
+
+    document.addEventListener("keydown", event => {
+        if (event.key === "Escape") closeTransactionDrawer();
+
+        const target = event.target;
+        const isTyping = target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement || target instanceof HTMLSelectElement;
+        const transactionsVisible = !document.getElementById("view-transactions")?.classList.contains("hidden");
+        if (event.key === "/" && !isTyping && transactionsVisible) {
+            event.preventDefault();
+            document.getElementById("transaction-primary-search")?.focus();
+        }
+    });
 }
 
 // --- Table Sorting Setup ---
@@ -1355,6 +1515,7 @@ async function fetchAndInitData() {
         if (!controlsInitialized) {
             setupFilters();
             setupSorting();
+            setupTransactionWorkspace();
             controlsInitialized = true;
         }
 
@@ -1413,8 +1574,8 @@ function initNavigation() {
                     topBarTitle.textContent = "Analytics & Charts";
                     topBarDesc.textContent = "Visual summaries, category allocations, and cash flows";
                 } else if (targetViewId === "view-transactions") {
-                    topBarTitle.textContent = "Transactions List";
-                    topBarDesc.textContent = "Full history of cash and cashless transactions";
+                    topBarTitle.textContent = "Transactions";
+                    topBarDesc.textContent = "Search, filter, and inspect your complete ledger";
                 } else if (targetViewId === "view-income") {
                     topBarTitle.textContent = "Income Analyzer";
                     topBarDesc.textContent = "Deep dive into scholarship and baito earnings";
