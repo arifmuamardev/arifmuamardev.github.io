@@ -141,13 +141,12 @@ import { createClient } from "https://cdn.jsdelivr.net/npm/@neondatabase/neon-js
       throw new Error("This Google account is not authorized for this finance dashboard.");
     }
 
-    const [cash, withdrawals, bni, muamalat, gopay, audit] = await Promise.all([
+    const [cash, withdrawals, bni, muamalat, gopay] = await Promise.all([
       fetchAll("cash_transactions", [{ column: "tanggal" }, { column: "id" }]),
       fetchAll("atm_transactions", [{ column: "tanggal" }, { column: "id" }]),
       fetchAll("bni_transactions", [{ column: "date" }, { column: "id" }]),
       fetchAll("muamalat_transactions", [{ column: "date" }, { column: "id" }]),
-      fetchAll("gopay_transactions", [{ column: "date" }, { column: "id" }]),
-      fetchAll("cash_transaction_audit", [{ column: "changed_at" }, { column: "audit_id" }])
+      fetchAll("gopay_transactions", [{ column: "date" }, { column: "id" }])
     ]);
 
     return {
@@ -156,7 +155,6 @@ import { createClient } from "https://cdn.jsdelivr.net/npm/@neondatabase/neon-js
       bni,
       muamalat,
       gopay,
-      audit,
       settings: settingsResult.data
     };
   }
@@ -227,6 +225,24 @@ import { createClient } from "https://cdn.jsdelivr.net/npm/@neondatabase/neon-js
   }
 
 
+  async function getAuditCount() {
+    const neon = getClient();
+    if (!neon) throw new Error("Neon is not configured.");
+    const { count, error } = await neon
+      .from("cash_transaction_audit")
+      .select("audit_id", { count: "exact", head: true });
+    if (error) throw error;
+    return Number(count) || 0;
+  }
+
+  async function getAllAuditHistory() {
+    return fetchAll("cash_transaction_audit", [
+      { column: "changed_at" },
+      { column: "audit_id" }
+    ]);
+  }
+
+
   function bindAuthUI() {
     const form = document.getElementById("auth-form");
     const logout = document.getElementById("logout-btn");
@@ -270,6 +286,8 @@ import { createClient } from "https://cdn.jsdelivr.net/npm/@neondatabase/neon-js
     reconcile,
     saveTransaction,
     getTransactionHistory,
+    getAuditCount,
+    getAllAuditHistory,
     signOut,
     bindAuthUI,
     setGateState
