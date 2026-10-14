@@ -30,3 +30,4 @@
 .visa-proof-detail {cursor:pointer;background:transparent;color:var(--text-primary);font-size:.63rem;padding:.4rem;border:1px solid var(--border-card);border-radius:6px}
 @media(max-width:900px){.visa-proof-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.visa-proof-grid{grid-template-columns:1fr}.visa-proof-row{grid-template-columns:1fr auto}.visa-proof-detail{grid-column:2;justify-self:end}.visa-proof-status{grid-column:1;text-align:left}}
 @media(max-width:540px){.visa-proof-kpis{grid-template-columns:1fr}.visa-proof-row{gap:.45rem}}
+.visa-proof-source_import {color:var(--color-income)}

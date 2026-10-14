@@ -103,3 +103,23 @@ test("amount alone with one-day date shift cannot make a match", () => {
   const m=snapshotForTest(x,[{id:31,tanggal:"2026-09-27",pengeluaran:500,note:"CC KU",tempat:"Unrelated shop"}]);
   assert.equal(m.counts.unmatched,1);
 });
+
+test("traceable statement import is distinguished from pre-existing CC KU candidates",()=>{
+ const x=fixture();
+ const rows=[{id:42,tanggal:"2026-10-11",pengeluaran:500,note:"CC KU | VISA-PDF-20261110-L01 | Provisional source"}];
+ const m=snapshotForTest(x,rows);
+ assert.equal(m.counts.imports,1);
+ assert.equal(m.totals.imports,500);
+ assert.equal(m.counts.ccCandidates,0);
+});
+test("two equal-value PDF imports respect source line identity",()=>{
+ const x=fixture();
+ const rows=[
+  {id:200,tanggal:"2026-10-11",pengeluaran:500,note:"CC KU | VISA-PDF-20261110-L02"},
+  {id:201,tanggal:"2026-10-11",pengeluaran:500,note:"CC KU | VISA-PDF-20261110-L01"}
+ ];
+ const m=snapshotForTest(x,rows);
+ assert.equal(m.counts.imports,2);
+ assert.equal(m.lines[0].ledgerId,201);
+ assert.equal(m.lines[1].ledgerId,200);
+});

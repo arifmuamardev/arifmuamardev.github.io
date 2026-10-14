@@ -22,14 +22,17 @@
       const options = ledger.filter(row => !taken.has(String(row.id)) &&
         date(row.tanggal) === date(result.transaction_date) &&
         moneyEq(row.pengeluaran, result.amount_jpy) && num(row.pengeluaran) > 0);
-      options.sort((a, b) =>
-        (note(a).includes("CC KU") ? 0 : 1) - (note(b).includes("CC KU") ? 0 : 1) ||
+      const sourceTag = "VISA-PDF-20261110-L" + String(result.line_no).padStart(2, "0");
+      const priority = row => note(row).includes(sourceTag) ? 0 :
+        note(row).includes("CC KU") ? 1 : 2;
+      options.sort((a, b) => priority(a) - priority(b) ||
         Number(a.id || 0) - Number(b.id || 0));
       if (!options.length) continue;
       const choice = options[0];
       taken.add(String(choice.id));
       result.ledgerId = Number(choice.id);
-      result.status = note(choice).includes("CC KU") ? "cc_candidate" : "amount_candidate";
+      result.status = note(choice).includes(sourceTag) ? "source_import" :
+        note(choice).includes("CC KU") ? "cc_candidate" : "amount_candidate";
     }
 
     // If the bank posted the same merchant one day later, retain a separate
@@ -92,13 +95,13 @@
       credit: creditData, lines, octLines,
       asOf: date(creditData.as_of),
       counts: {
-        total: lines.length, ccCandidates: count("cc_candidate"),
+        total: lines.length, imports: count("source_import"), ccCandidates: count("cc_candidate"),
         shiftedCandidates: count("date_shift_candidate"),
         amountCandidates: count("amount_candidate"), unmatched: count("unmatched")
       },
       totals: {
         pdf: novTotal, sum: total,
-        ccCandidates: sum("cc_candidate"), shiftedCandidates: sum("date_shift_candidate"),
+        imports: sum("source_import"), ccCandidates: sum("cc_candidate"), shiftedCandidates: sum("date_shift_candidate"),
         amountCandidates: sum("amount_candidate"),
         unmatched: sum("unmatched")
       },
@@ -131,7 +134,8 @@
     if (n) n.textContent = String(val);
   }
   function statusName(kind) {
-    return kind === "cc_candidate" ? "CC KU candidate" :
+    return kind === "source_import" ? "Imported from PDF" :
+      kind === "cc_candidate" ? "CC KU candidate" :
       kind === "date_shift_candidate" ? "1-day merchant match" :
       kind === "amount_candidate" ? "Date / amount only" : "Not found in ledger";
   }
@@ -186,6 +190,8 @@
     put("visa-nov-bill", yen(m.totals.pdf));
     put("visa-oct-bill", yen(m.october.total_jpy));
     put("visa-nov-count", m.counts.total);
+    put("visa-import-count", m.counts.imports);
+    put("visa-import-sum", yen(m.totals.imports));
     put("visa-candidate-count", m.counts.ccCandidates);
     put("visa-candidate-sum", yen(m.totals.ccCandidates));
     put("visa-shift-candidate-count", m.counts.shiftedCandidates);
