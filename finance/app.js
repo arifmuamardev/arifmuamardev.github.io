@@ -376,7 +376,11 @@ function updateHomeCommandCenter() {
 
     const dateKey = item => String(item?.tanggal || "").slice(0, 7);
     const currentMonth = cashData.filter(item => dateKey(item) === monthKey);
-    const previousMonth = cashData.filter(item => dateKey(item) === previousKey);
+    const currentDay = Number(tokyoParts.day);
+    const previousMonth = cashData.filter(item =>
+        dateKey(item) === previousKey &&
+        Number(String(item?.tanggal || "").slice(8, 10)) <= currentDay
+    );
 
     const summarize = rows => rows.reduce((acc, item) => {
         if (isExcludedTransfer(item.item_normalized)) return acc;
@@ -391,7 +395,7 @@ function updateHomeCommandCenter() {
     const net = current.income - current.spending;
     const savingsRate = current.income > 0
         ? (net / current.income) * 100
-        : (current.spending > 0 ? -100 : 0);
+        : null;
 
     const latestBalanceItem = [...cashData].reverse().find(item =>
         item.saldo !== null && item.saldo !== undefined && Number.isFinite(Number(item.saldo))
@@ -412,9 +416,9 @@ function updateHomeCommandCenter() {
         netEl.classList.toggle("expense", net < 0);
     }
     if (savingsEl) {
-        savingsEl.textContent = `${savingsRate.toFixed(1)}%`;
-        savingsEl.classList.toggle("income", savingsRate >= 20);
-        savingsEl.classList.toggle("expense", savingsRate < 0);
+        savingsEl.textContent = savingsRate === null ? "—" : `${savingsRate.toFixed(1)}%`;
+        savingsEl.classList.toggle("income", savingsRate !== null && savingsRate >= 20);
+        savingsEl.classList.toggle("expense", savingsRate !== null && savingsRate < 0);
     }
     if (incomeNoteEl) {
         incomeNoteEl.textContent = current.incomeEntries
@@ -429,7 +433,7 @@ function updateHomeCommandCenter() {
     if (spendingNoteEl) {
         spendingNoteEl.textContent = spendingDelta === null
             ? "No prior-month baseline"
-            : `${Math.abs(spendingDelta).toFixed(0)}% ${spendingDelta >= 0 ? "higher" : "lower"} than last month`;
+            : `${Math.abs(spendingDelta).toFixed(0)}% ${spendingDelta >= 0 ? "higher" : "lower"} vs same period last month`;
     }
 
     const alerts = [];
@@ -442,19 +446,28 @@ function updateHomeCommandCenter() {
         });
     }
 
+    if (current.income === 0 && currentMonth.length > 0) {
+        alerts.push({
+            type: "",
+            icon: "fa-coins",
+            title: "No income recorded yet",
+            text: "Savings rate will appear after this month's first income entry."
+        });
+    }
+
     if (spendingDelta !== null && spendingDelta >= 15) {
         alerts.push({
             type: "warning",
             icon: "fa-arrow-trend-up",
             title: "Spending is rising",
-            text: `This month is ${spendingDelta.toFixed(0)}% above last month's spending so far.`
+            text: `Spending is ${spendingDelta.toFixed(0)}% above the same period last month.`
         });
     } else if (spendingDelta !== null && spendingDelta <= -15) {
         alerts.push({
             type: "success",
             icon: "fa-arrow-trend-down",
             title: "Spending is lower",
-            text: `This month is ${Math.abs(spendingDelta).toFixed(0)}% below last month's spending.`
+            text: `Spending is ${Math.abs(spendingDelta).toFixed(0)}% below the same period last month.`
         });
     }
 
