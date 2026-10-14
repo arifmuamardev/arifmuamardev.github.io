@@ -1371,6 +1371,9 @@ function setupFilters() {
 
 function setupTransactionWorkspace() {
     window.TransactionEditor?.init();
+    window.addEventListener("budget:data-tools-error", event => {
+        showToast(event.detail?.message || "Data export failed.", "error");
+    });
 
     window.addEventListener("budget:transaction-saved", async event => {
         closeTransactionDrawer();
