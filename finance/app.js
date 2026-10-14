@@ -1970,7 +1970,7 @@ async function bootstrapApplication() {
     initTheme();
     initNavigation();
     initShellUX();
-    initAISimulator();
+    initBudgetSimulator();
 
     try {
         await waitForBudgetCloud();
@@ -3624,7 +3624,7 @@ function updateUtilityPages(filteredData) {
     updateSingleUtilityPage(filteredData, "water", "Water Bill", "#06b6d4");
     updateSingleUtilityPage(filteredData, "mobile", "Mobile Bill", "#ec4899");
     updateUtilitiesOverviewPage(filteredData);
-    updateAIRecommendationsPage(filteredData);
+    updateInsightsPage(filteredData);
 }
 
 function getClosestUpcomingUtilityBill(filteredData) {
@@ -3903,12 +3903,12 @@ function renderUtilitiesOverviewChart(monthlySummary) {
     });
 }
 
-// --- AI Recommendations & Budget Simulator ---
+// --- Financial Insights & Budget Simulator ---
 let simBaselineIncome = 145000;
 let simBaselineRent = 45228;
 let simBaselineUtilities = 7377;
 
-function updateAIRecommendationsPage(filteredData) {
+function updateInsightsPage(filteredData) {
     const source = cashData.length ? cashData : filteredData;
     if (!source.length) return;
 
@@ -4052,7 +4052,7 @@ function updateAIRecommendationsPage(filteredData) {
     updateSimulator();
 }
 
-function initAISimulator() {
+function initBudgetSimulator() {
     const sliderGroceries = document.getElementById("slider-groceries");
     const sliderDining = document.getElementById("slider-dining");
     const sliderDiscretionary = document.getElementById("slider-discretionary");
