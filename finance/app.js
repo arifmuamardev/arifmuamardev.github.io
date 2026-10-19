@@ -1415,6 +1415,7 @@ function setupTransactionWorkspace() {
     window.MonthlyReview?.init();
     window.FinanceForecast?.init();
     window.FinanceIntegrity?.init();
+    window.FinanceReceiptEvidence?.init();
     window.FinanceAccountEvidence?.init();
     window.FinanceVisaReview?.init();
     window.FinanceTokopediaProof?.init();
@@ -1696,6 +1697,11 @@ async function fetchAndInitData() {
             budgets: payload.budgets || []
         });
         window.FinanceIntegrity?.setData({ cash: cashData });
+        window.FinanceReceiptEvidence?.setData({
+            receipts: payload.receiptEvidence,
+            cash: cashData,
+            loadError: payload.receiptEvidenceError
+        });
         window.FinanceFlowAudit?.setData({ cash: cashData });
         window.FinanceTransferProof?.setData({
           cash: cashData, bni: bniData, muamalat: muamalatData,
@@ -1885,6 +1891,7 @@ function initNavigation() {
                 window.FinanceForecast?.render();
             } else if (targetViewId === "view-integrity") {
                 window.FinanceIntegrity?.render();
+                window.FinanceReceiptEvidence?.render();
             } else if (targetViewId === "view-flow-audit") {
                 window.FinanceFlowAudit?.render();
             } else if (targetViewId === "view-transfer-proof") {
