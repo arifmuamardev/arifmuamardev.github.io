@@ -286,8 +286,22 @@ import { createClient } from "https://cdn.jsdelivr.net/npm/@neondatabase/neon-js
       tokopediaStatementsError = true;
     }
 
+    // Optional private read-only JP Post Bank statement data; never substitute ledger balance.
+    let jpPost = [];
+    let jpPostLoadError = false;
+    try {
+      jpPost = await fetchAll("jp_post_transactions", [
+        { column: "date" }, { column: "id" }
+      ]);
+    } catch (error) {
+      console.error("Unable to load Japan Post Bank account:", error);
+      jpPostLoadError = true;
+    }
+
     return {
       cash,
+      jpPost,
+      jpPostLoadError,
       withdrawals,
       bni,
       muamalat,

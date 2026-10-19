@@ -15,7 +15,7 @@
     "Balance Reconciliation",
     "Transfer & ATM Fees"
   ]);
-  let datasets = { cash: [], withdrawals: [], bni: [], muamalat: [], gopay: [] };
+  let datasets = { cash: [], withdrawals: [], bni: [], muamalat: [], gopay: [], jpPost: [] };
   let clockOverride = null;
 
   function str(x) { return String(x ?? "").trim(); }
@@ -159,8 +159,14 @@
     const accounts = ACCOUNT_SOURCES.map(config => ({
       ...config, ...bankEvidence(config.name, data[config.key], asOf)
     }));
+    const jp = posted(data.jpPost, "date", asOf);
+    const latestJP = [...jp].reverse().find(row =>
+      row.balance_jpy !== null && row.balance_jpy !== undefined &&
+      Number.isFinite(Number(row.balance_jpy)));
     return {
       asOf, ledger: ledgerEvidence(data.cash, asOf),
+      jpPost: { count: jp.length, balanceJpy: latestJP ? num(latestJP.balance_jpy) : null,
+        date: latestJP ? txDate(latestJP) : null },
       accounts, atm: atmEvidence(data.withdrawals, asOf),
       totalDifferences: accounts.reduce((n, a) => n + a.differences, 0),
       manualAccounts: ["Cash wallet", "Japan Post Bank", "Hokuriku Bank"]
@@ -207,14 +213,17 @@
     }
   }
 
-  function renderManual() {
+  function renderManual(jpEvidence = {}) {
     const container = el("account-evidence-japan");
     if (!container) return;
     container.replaceChildren();
     for (const name of ["Cash wallet", "Japan Post Bank", "Hokuriku Bank"]) {
       const card = add("article", "account-evidence-manual");
       card.append(add("strong", "", name));
-      card.append(add("span", "", "Balance not individually available in linked tables"));
+      const hasJP = name === "Japan Post Bank" && jpEvidence.balanceJpy != null;
+      card.append(add("span", "", hasJP ? "Historic balance: ¥" + format(jpEvidence.balanceJpy, 0) +
+        " · " + jpEvidence.date + " · not live" : "Current balance not individually verified"));
+      if (hasJP) card.append(linkButton("Open Japan Post Bank", "view-jp-post-account"));
       container.append(card);
     }
   }
@@ -304,7 +313,7 @@
       " · deposits ¥" + format(m.atm.deposits, 0) +
       " · fees ¥" + format(m.atm.fees, 0));
     renderAccounts(m.accounts);
-    renderManual();
+    renderManual(m.jpPost);
     renderBankDifferences(m.accounts);
     renderMovements(m.ledger.movements);
     renderAtm(m.atm);
@@ -338,7 +347,7 @@
   if (typeof module !== "undefined" && module.exports)
     module.exports = {
       snapshotForTest({ data = {}, asOf = "2026-10-14" } = {}) {
-        const clean = { cash: [], withdrawals: [], bni: [], muamalat: [], gopay: [], ...data };
+        const clean = { cash: [], withdrawals: [], bni: [], muamalat: [], gopay: [], jpPost: [], ...data };
         return calculate(clean, asOf);
       }
     };
