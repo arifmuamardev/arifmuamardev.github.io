@@ -52,3 +52,23 @@ test("pending that wrongly links to a ledger entry is flagged",()=>{
 test("load failure is explicit, not a false empty history",()=>{
  const x=reconcileForTest([],[],true);assert.equal(x.available,false);
 });
+
+test("BNI October card payment evidence uses original signed repayment not an extra purchase",()=>{
+ const receipt=src("BNI-SCREEN-20261018-TOKOPEDIA-1774506","posted",2063,1774506,"IDR","2026-10-18");
+ const raw=ledger(2063,"BNI-SCREEN-20261018-TOKOPEDIA-1774506",-1774506,"IDR");
+ raw.kategori_normalized="Card Settlement";
+ const result=reconcileForTest([receipt],[raw]);
+ assert.equal(result.posted,1);assert.equal(result.suspect,0);
+});
+test("old pending app screenshot is shown settled only when bank-backed splits appear in ledger",()=>{
+ const original=src("RCPT-20261015-GOPAY-201000","pending",null,201000,"IDR");
+ original.payload.details={bank_confirmation:{status:"posted_to_BNI",topup_amount_idr:200000,
+ fee_idr:1000,topup_ledger_source:"BNI-SCREEN-20261015-GOPAY-200000",
+ fee_ledger_source:"BNI-SCREEN-20261015-GOPAY-FEE-1000"}};
+ const ledgers=[ledger(1,"BNI-SCREEN-20261015-GOPAY-200000",200000,"IDR"),
+ ledger(2,"BNI-SCREEN-20261015-GOPAY-FEE-1000",1000,"IDR")];
+ const result=reconcileForTest([original],ledgers);
+ assert.equal(result.pending,1);assert.equal(result.items[0].laterConfirmed,true);
+ assert.equal(result.suspect,0);
+ assert.equal(reconcileForTest([original],[]).suspect,1);
+});

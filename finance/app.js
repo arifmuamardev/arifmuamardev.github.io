@@ -1724,7 +1724,8 @@ async function fetchAndInitData() {
             evidence: payload.tokopediaEvidence,
             loadError: payload.tokopediaEvidenceError,
             statements: payload.tokopediaStatements,
-            statementLoadError: payload.tokopediaStatementsError
+            statementLoadError: payload.tokopediaStatementsError,
+            bni: bniData
         });
 
         const filtered = getFilteredData();
