@@ -99,3 +99,77 @@ test("unique ledger candidate is consumed at most once",()=>{
  assert.equal(m.counts.candidates,1);
  assert.equal(m.counts.missing,2);
 });
+
+const {statementForTest}=require("../features/tokopedia-proof.js");
+function officialFixture(){
+ const charges=Array.from({length:9},(_,i)=>({
+   ledger_id:i+10,transaction_date:"2026-09-28",amount_idr:1000+i,
+   description:"Card purchase "+i
+ }));
+ const sum=charges.reduce((a,c)=>a+c.amount_idr,0);
+ const statement={
+  evidence_key:"BRI-TOKOPEDIA-STATEMENT-2026-10-15",statement_date:"2026-10-15",
+  due_date:"2026-11-01",total_idr:sum+5000,
+  credit_limit_idr:15000000,available_credit_idr:5070322,
+  card_minimum_idr:88475,all_cards_minimum_idr:167530,
+  payload:{charges,e_statement_fee_idr:5000,e_statement_fee_ledger_id:2054,
+   previous_payment_idr:3350609,previous_payment_ledger_id:2035}
+ };
+ const ledger=charges.map(c=>({id:c.ledger_id,currency:"IDR",tanggal:c.transaction_date,
+ expense_idr:c.amount_idr,note:"Tokopedia Card | TKP-SHOT-20260928-00"}));
+ ledger.push({id:2054,currency:"IDR",tanggal:"2026-10-15",expense_idr:5000,
+ note:"BRI-TK-STAT-20261015-FEE"});
+ ledger.push({id:2035,currency:"IDR",expense_idr:-3350609,
+ kategori_normalized:"Card Settlement"});
+ return {statement,ledger};
+}
+test("official statement links purchase charges and unique fee with exact IDR",()=>{
+ const {statement,ledger}=officialFixture();
+ const m=statementForTest([statement],ledger);
+ assert.equal(m.matchedCharges,9);
+ assert.equal(m.feeMatched,true);
+ assert.equal(m.totalEquation,true);
+ assert.equal(m.priorPaymentMatched,true);
+ assert.equal(m.checksPassed,true);
+});
+test("official statement never counts previous card repayment as a new purchase",()=>{
+ const {statement,ledger}=officialFixture();
+ const m=statementForTest([statement],ledger);
+ assert.equal(m.charges.length,9);
+ assert.ok(!m.charges.some(c=>c.ledger_id===2035));
+});
+test("same amount with wrong statement date is not an exact card match",()=>{
+ const {statement,ledger}=officialFixture();
+ ledger[0].tanggal="2026-09-27";
+ assert.equal(statementForTest([statement],ledger).allChargesMatched,false);
+});
+test("repeated ledger ID on two statement charges is not double counted",()=>{
+ const {statement,ledger}=officialFixture();
+ statement.payload.charges[1].ledger_id=statement.payload.charges[0].ledger_id;
+ assert.equal(statementForTest([statement],ledger).allChargesMatched,false);
+});
+test("missing e-statement fee is not silently invented",()=>{
+ const {statement,ledger}=officialFixture();
+ const m=statementForTest([statement],ledger.filter(x=>x.id!==2054));
+ assert.equal(m.feeMatched,false);
+ assert.equal(m.checksPassed,false);
+});
+test("missing old repayment is not marked as verified",()=>{
+ const {statement,ledger}=officialFixture();
+ assert.equal(statementForTest([statement],ledger.filter(x=>x.id!==2035)).priorPaymentMatched,false);
+});
+test("incorrect statement total is rejected",()=>{
+ const {statement,ledger}=officialFixture();
+ statement.total_idr+=1;
+ assert.equal(statementForTest([statement],ledger).totalEquation,false);
+});
+test("private statement load error does not imply a zero balance",()=>{
+ const m=statementForTest([],[],true);
+ assert.equal(m.available,false);assert.equal(m.error,true);
+});
+test("statement available credit is not equal to amount due",()=>{
+ const {statement,ledger}=officialFixture();
+ const m=statementForTest([statement],ledger);
+ assert.equal(m.usedCredit,9929678);
+ assert.notEqual(m.usedCredit,statement.total_idr);
+});

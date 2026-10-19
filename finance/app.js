@@ -1722,7 +1722,9 @@ async function fetchAndInitData() {
         window.FinanceTokopediaProof?.setData({
             cash: cashData,
             evidence: payload.tokopediaEvidence,
-            loadError: payload.tokopediaEvidenceError
+            loadError: payload.tokopediaEvidenceError,
+            statements: payload.tokopediaStatements,
+            statementLoadError: payload.tokopediaStatementsError
         });
 
         const filtered = getFilteredData();
