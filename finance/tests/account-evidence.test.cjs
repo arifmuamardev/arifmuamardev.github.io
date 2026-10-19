@@ -121,8 +121,10 @@ test("native balance comparisons tolerate one rupiah of rounding",()=>{
 });
 
 test("Japan Post historical balance does not override the general JPY ledger",()=>{
- const x=snapshot({cash:[ledger(1,"2026-10-02",0,0,416346)],
-  jpPost:[{id:1,date:"2026-10-18",sign:"+",amount_jpy:9000,balance_jpy:364792}]});
+ const x=snapshotForTest({asOf:"2026-10-19",data:{
+  cash:[ledger(1,"2026-10-02",0,0,416346)],
+  jpPost:[{id:1,date:"2026-10-18",sign:"+",amount_jpy:9000,balance_jpy:364792}]
+ }});
  assert.equal(x.ledger.balance,416346);
  assert.equal(x.jpPost.balanceJpy,364792);
  assert.equal(x.jpPost.date,"2026-10-18");
