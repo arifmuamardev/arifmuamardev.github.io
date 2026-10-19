@@ -143,8 +143,37 @@
       amount(record.payload?.payment_statement_total_idr)===amount(record.total_idr) &&
       amount(record.payload?.payment_difference_idr)===paymentDifference
     );
+    const paymentFeeAmount=amount(record.payload?.payment_fee_idr);
+    const paymentFee=byId.get(Number(record.payload?.payment_fee_ledger_id));
+    const paymentFeeMatched=Boolean(paymentFee && currentPaymentMatched &&
+      paymentFeeAmount>0 && paymentDifference===paymentFeeAmount &&
+      string(paymentFee.currency)==="IDR" && paymentFeeAmount===amount(paymentFee.expense_idr) &&
+      string(paymentFee.kategori_normalized)==="Taxes & Fees" &&
+      date(paymentFee.tanggal)===paymentDate &&
+      string(paymentFee.note).includes("TKP-PAYMENT-FEE-20261018-5000")
+    );
+    const previousFeeAmount=amount(record.payload?.previous_payment_fee_idr);
+    const previousFee=byId.get(Number(record.payload?.previous_payment_fee_ledger_id));
+    const previousBank=(Array.isArray(bni)?bni:[]).find(
+      row=>Number(row.id)===Number(record.payload?.previous_payment_bni_id));
+    const previousGross=amount(record.payload?.previous_payment_bank_debit_idr);
+    const previousFeeMatched=Boolean(previousFee && previousBank && priorPaymentMatched &&
+      previousFeeAmount>0 && previousGross-amount(record.payload?.previous_payment_idr)===previousFeeAmount &&
+      string(previousFee.currency)==="IDR" && amount(previousFee.expense_idr)===previousFeeAmount &&
+      string(previousFee.kategori_normalized)==="Taxes & Fees" &&
+      date(previousFee.tanggal)==="2026-09-22" &&
+      string(previousFee.note).includes("TKP-PAYMENT-FEE-20260922-5000") &&
+      string(previousBank.sign)==="-" &&
+      date(previousBank.date)==="2026-09-22" &&
+      amount(previousBank.amount)===previousGross &&
+      /TOKOPEDIA/i.test(string(previousBank.description))
+    );
+    const feeBasis=string(record.payload?.payment_difference_status);
+    const feesConfirmedByUser=feeBasis==="user_confirmed_tokopedia_card_payment_processing_fee";
     return {available:true,record,charges:verified,fee,feeMatched,priorPaymentMatched,
-      currentPaymentMatched,paymentAmount:bankAmount,paymentDifference,paymentDate,
+      currentPaymentMatched,paymentFeeMatched,previousFeeMatched,feesConfirmedByUser,
+      paymentFeeAmount,previousFeeAmount,previousGross,
+      paymentAmount:bankAmount,paymentDifference,paymentDate,
       allChargesMatched,totalEquation,purchasesTotal:purchaseTotal,
       matchedCharges:verified.filter(x=>x.matched).length,
       checksPassed:allChargesMatched&&feeMatched&&priorPaymentMatched&&totalEquation,
@@ -218,17 +247,24 @@
     put("tokopedia-official-combined-minimum",idr(s.all_cards_minimum_idr));
     put("tokopedia-official-purchases",statement.matchedCharges+"/9 · "+idr(statement.purchasesTotal));
     put("tokopedia-official-fee",idr(s.payload?.e_statement_fee_idr));
+    put("tokopedia-official-oct-fee",statement.paymentFeeMatched?
+      idr(statement.paymentFeeAmount)+" · confirmed":"Fee requires review");
+    put("tokopedia-official-sep-fee",statement.previousFeeMatched?
+      idr(statement.previousFeeAmount)+" · confirmed":"Fee requires review");
     put("tokopedia-official-credit",idr(s.available_credit_idr));
     put("tokopedia-official-match",statement.checksPassed?
       "Verified: 9 existing charges + 1 unique fee + prior repayment":
       "Attention: one or more statement-to-ledger links need review");
-    put("tokopedia-official-status",statement.currentPaymentMatched
-      ? "PAID via BNI virtual account on "+statement.paymentDate+". Bank debit "+
-        idr(statement.paymentAmount)+" against statement "+idr(s.total_idr)+
-        ". Difference "+idr(statement.paymentDifference)+
-        " remains unexplained; no extra fee was invented. The card payment is a settlement, not new spending."
-      : "This statement's settlement is not verified by linked bank and ledger records. "+
-        "Card purchases and the previous month's payment are tracked separately.");
+    put("tokopedia-official-status",statement.currentPaymentMatched && statement.paymentFeeMatched
+      ? "PAID via BNI on "+statement.paymentDate+". Statement "+
+        idr(s.total_idr)+" + Tokopedia payment fee "+idr(statement.paymentFeeAmount)+
+        " = BNI debit "+idr(statement.paymentAmount)+
+        ". Fee classified from your confirmation and checked against the ledger and bank amount."+
+        " The card repayment itself is not new spending."
+      : statement.currentPaymentMatched
+        ? "BNI confirms a card repayment, but its payment fee still needs a valid ledger match."
+        : "This statement's settlement is not verified by linked bank and ledger records. "+
+          "Card purchases and the previous month's payment are tracked separately.");
     const list=document.getElementById("tokopedia-official-lines");
     if(list){
       list.replaceChildren();

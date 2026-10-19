@@ -210,3 +210,66 @@ test("bank mismatch blocks false paid confirmation",()=>{
  const bni=[{id:757,date:"2026-10-18",sign:"-",amount:1769506,description:"TOKOPEDIA"}];
  assert.equal(statementForTest([statement],ledger,false,bni).currentPaymentMatched,false);
 });
+
+function bothFeesFixture(){
+ const {statement,ledger}=officialFixture();
+ Object.assign(statement.payload,{
+  payment_ledger_id:2063,payment_bni_id:757,payment_date:"2026-10-18",
+  payment_bank_amount_idr:1774506,payment_statement_total_idr:statement.total_idr,
+  payment_difference_idr:1774506-statement.total_idr,
+  payment_difference_status:"user_confirmed_tokopedia_card_payment_processing_fee",
+  payment_fee_idr:5000,payment_fee_ledger_id:2065,
+  previous_payment_fee_idr:5000,previous_payment_fee_ledger_id:2064,
+  previous_payment_bni_id:725,previous_payment_bank_debit_idr:3355609
+ });
+ ledger.push(
+ {id:2063,currency:"IDR",tanggal:"2026-10-18",expense_idr:-1774506,
+  kategori_normalized:"Card Settlement",note:"BNI-SCREEN-20261018-TOKOPEDIA-1774506"},
+ {id:2064,currency:"IDR",tanggal:"2026-09-22",expense_idr:5000,pengeluaran:45.62,
+  kategori_normalized:"Taxes & Fees",note:"TKP-PAYMENT-FEE-20260922-5000"},
+ {id:2065,currency:"IDR",tanggal:"2026-10-18",expense_idr:5000,pengeluaran:45.62,
+  kategori_normalized:"Taxes & Fees",note:"TKP-PAYMENT-FEE-20261018-5000"}
+ );
+ const bni=[
+ {id:725,date:"2026-09-22",sign:"-",amount:3355609,description:"TOKOPEDIA - PLSTOKOPEDIAARIF"},
+ {id:757,date:"2026-10-18",sign:"-",amount:1774506,description:"TOKOPEDIA - PLSTOKOPEDIAARIF"}
+ ];
+ return {statement,ledger,bni};
+}
+test("two Tokopedia payment fees reconcile with distinct dates and bank debits",()=>{
+ const {statement,ledger,bni}=bothFeesFixture();
+ const model=statementForTest([statement],ledger,false,bni);
+ assert.equal(model.currentPaymentMatched,true);
+ assert.equal(model.paymentFeeMatched,true);
+ assert.equal(model.previousFeeMatched,true);
+ assert.equal(model.feesConfirmedByUser,true);
+ assert.equal(model.paymentFeeAmount,5000);
+ assert.equal(model.previousFeeAmount,5000);
+ assert.equal(model.checksPassed,true);
+});
+test("e-statement fee remains separate from the repayment fee",()=>{
+ const {statement,ledger,bni}=bothFeesFixture();
+ const m=statementForTest([statement],ledger,false,bni);
+ assert.equal(m.feeMatched,true);
+ assert.equal(ledger.filter(x=>x.kategori_normalized==="Taxes & Fees").length,2);
+ assert.ok(ledger.find(x=>x.id===2054));
+});
+test("wrong October fee does not yield a fully reconciled payment",()=>{
+ const {statement,ledger,bni}=bothFeesFixture();
+ ledger.find(x=>x.id===2065).expense_idr=4000;
+ const m=statementForTest([statement],ledger,false,bni);
+ assert.equal(m.currentPaymentMatched,true);
+ assert.equal(m.paymentFeeMatched,false);
+ assert.equal(m.previousFeeMatched,true);
+});
+test("September fee requires its original source debit, not just same amount",()=>{
+ const {statement,ledger,bni}=bothFeesFixture();
+ const m=statementForTest([statement],ledger,false,bni.filter(x=>x.id!==725));
+ assert.equal(m.previousFeeMatched,false);
+ assert.equal(m.paymentFeeMatched,true);
+});
+test("repayment fee amount cannot silently become a second card bill",()=>{
+ const {statement,ledger,bni}=bothFeesFixture();
+ ledger.find(x=>x.id===2065).kategori_normalized="Card Settlement";
+ assert.equal(statementForTest([statement],ledger,false,bni).paymentFeeMatched,false);
+});
