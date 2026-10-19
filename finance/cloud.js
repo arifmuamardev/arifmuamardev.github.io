@@ -261,6 +261,18 @@ import { createClient } from "https://cdn.jsdelivr.net/npm/@neondatabase/neon-js
       tokopediaEvidenceError = true;
     }
 
+    // Owner-restricted receipt registry. Errors are isolated from sign-in.
+    let receiptEvidence = [];
+    let receiptEvidenceError = false;
+    try {
+      receiptEvidence = await fetchAll("finance_receipt_evidence", [
+        { column: "receipt_date" }, { column: "evidence_key" }
+      ]);
+    } catch (error) {
+      console.error("Unable to load private receipt registry:", error);
+      receiptEvidenceError = true;
+    }
+
     return {
       cash,
       withdrawals,
@@ -272,6 +284,8 @@ import { createClient } from "https://cdn.jsdelivr.net/npm/@neondatabase/neon-js
       cardEvidenceError,
       tokopediaEvidence,
       tokopediaEvidenceError,
+      receiptEvidence,
+      receiptEvidenceError,
       settings: settingsResult.data
     };
   }

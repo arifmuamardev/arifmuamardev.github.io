@@ -16,7 +16,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.min.js"></script>
     <!-- Public Neon endpoints live in config.js; database credentials never ship to the browser. -->
     <script src="config.js?v=4.0.1"></script>
-    <script type="module" src="cloud.js?v=5.5.0"></script>
+    <script type="module" src="cloud.js?v=5.9.0"></script>
     <link rel="stylesheet" href="styles.css?v=4.9.1">
     <link rel="stylesheet" href="features/transaction-editor.css?v=5.6.0">
     <link rel="stylesheet" href="features/transaction-history.css?v=4.5.0">
@@ -25,6 +25,7 @@
     <link rel="stylesheet" href="features/monthly-review.css?v=4.9.0">
     <link rel="stylesheet" href="features/forecast.css?v=5.0.0">
     <link rel="stylesheet" href="features/data-integrity.css?v=5.2.0">
+    <link rel="stylesheet" href="features/receipt-evidence.css?v=5.9.0">
     <link rel="stylesheet" href="features/account-evidence.css?v=5.3.0">
     <link rel="stylesheet" href="features/visa-review.css?v=5.4.0">
     <link rel="stylesheet" href="features/tokopedia-proof.css?v=5.5.0">
@@ -41,10 +42,11 @@
     <script src="features/transfer-proof.js?v=5.8.0" defer></script>
     <script src="features/forecast.js?v=5.7.0" defer></script>
     <script src="features/data-integrity.js?v=5.2.0" defer></script>
+    <script src="features/receipt-evidence.js?v=5.9.0" defer></script>
     <script src="features/account-evidence.js?v=5.3.0" defer></script>
     <script src="features/visa-review.js?v=5.4.0" defer></script>
     <script src="features/tokopedia-proof.js?v=5.5.0" defer></script>
-    <script src="app.js?v=5.8.0" defer></script>
+    <script src="app.js?v=5.9.0" defer></script>
 </head>
 <body class="dark-theme">
     <div id="auth-gate" class="auth-gate" aria-live="polite">
@@ -740,6 +742,17 @@
                     </div>
                     <div id="integrity-quality-note" class="integrity-note glass-panel hidden"></div>
                     <div class="integrity-panels">
+                        <section class="integrity-panel glass-panel">
+                            <h3>Recent receipt evidence</h3>
+                            <p>Private source metadata for imported photos and payment screenshots. Same-day duplicates link to existing ledger entries; different-day purchases remain separate. Pending payments shown in screenshots are not treated as posted charges. Original image files are not hosted here.</p>
+                            <div class="receipt-evidence-stats">
+                                <div class="receipt-evidence-stat"><strong id="receipt-evidence-posted">—</strong><small>Imported</small></div>
+                                <div class="receipt-evidence-stat"><strong id="receipt-evidence-skipped">—</strong><small>Already recorded</small></div>
+                                <div class="receipt-evidence-stat"><strong id="receipt-evidence-pending">—</strong><small>Pending at capture</small></div>
+                            </div>
+                            <p id="receipt-evidence-check" class="integrity-empty">Checking receipt links…</p>
+                            <div id="receipt-evidence-list"></div>
+                        </section>
                         <section class="integrity-panel glass-panel">
                             <h3>Unclassified transactions (Others)</h3>
                             <p>Items lacking enough evidence for a more precise category. Click to open the transaction, review original description and receipts, then choose a category yourself. No automatic rewriting.</p>
