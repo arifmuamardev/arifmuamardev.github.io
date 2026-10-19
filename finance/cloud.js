@@ -273,6 +273,19 @@ import { createClient } from "https://cdn.jsdelivr.net/npm/@neondatabase/neon-js
       receiptEvidenceError = true;
     }
 
+    // Official BRI Tokopedia billing metadata, private and owner scoped.
+    // Only extracted transaction summaries are stored, never PDF passwords.
+    let tokopediaStatements = [];
+    let tokopediaStatementsError = false;
+    try {
+      tokopediaStatements = await fetchAll("finance_card_statement_evidence", [
+        { column: "statement_date" }, { column: "evidence_key" }
+      ]);
+    } catch (error) {
+      console.error("Unable to load private card statement evidence:", error);
+      tokopediaStatementsError = true;
+    }
+
     return {
       cash,
       withdrawals,
@@ -284,6 +297,8 @@ import { createClient } from "https://cdn.jsdelivr.net/npm/@neondatabase/neon-js
       cardEvidenceError,
       tokopediaEvidence,
       tokopediaEvidenceError,
+      tokopediaStatements,
+      tokopediaStatementsError,
       receiptEvidence,
       receiptEvidenceError,
       settings: settingsResult.data

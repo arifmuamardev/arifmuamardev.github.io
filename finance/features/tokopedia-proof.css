@@ -29,3 +29,13 @@
 .tokopedia-proof-row-hint{grid-column:1 / -1;color:var(--text-muted);font-size:.63rem}
 @media(max-width:900px){.tokopedia-proof-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.tokopedia-proof-meta{grid-template-columns:1fr}.tokopedia-proof-row{grid-template-columns:1fr auto}.tokopedia-proof-row-hint{grid-column:1/-1}}
 @media(max-width:520px){.tokopedia-proof-grid{grid-template-columns:1fr}.tokopedia-proof-status{grid-column:1}.tokopedia-proof-detail{grid-column:2;grid-row:2}}
+
+.tokopedia-official-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.6rem;margin:.85rem 0}
+.tokopedia-official-grid>div{border:1px solid var(--border-card);border-radius:10px;padding:.8rem}
+.tokopedia-official-grid span,.tokopedia-official-grid strong{display:block}
+.tokopedia-official-grid span{font-size:.67rem;color:var(--text-muted)}
+.tokopedia-official-grid strong{font:700 1rem 'Outfit',sans-serif;color:var(--text-primary);margin-top:.3rem}
+.tokopedia-official-details{margin-top:1rem;font-size:.75rem}
+.tokopedia-official-details summary{cursor:pointer;color:var(--text-primary);font-weight:600}
+.tokopedia-official-details .tokopedia-proof-pair strong{text-align:right}
+@media(max-width:600px){.tokopedia-official-grid{grid-template-columns:1fr}}

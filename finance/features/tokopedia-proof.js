@@ -3,7 +3,7 @@
 
   // Bank-app screenshots are evidence, not a live card feed or final e-statement.
   // A source row is consumed at most once, regardless of overlapping screenshots.
-  let source = { evidence: [], cash: [], error: false };
+  let source = { evidence: [], cash: [], error: false, statements: [], statementError: false };
   let filter = "all";
   const amount = x => Number(x) || 0;
   const string = x => String(x ?? "");
@@ -86,6 +86,54 @@
     };
   }
 
+
+  // Official PDF statement is a fixed billing-period snapshot, not a live balance.
+  // Link exact original IDR values to already imported screenshot records.
+  function reconcileStatement(statements,cash,loadError=false) {
+    if(loadError)return {available:false,error:true,reason:"Official billing data could not be loaded."};
+    const record=(Array.isArray(statements)?statements:[])
+      .find(x=>x.evidence_key==="BRI-TOKOPEDIA-STATEMENT-2026-10-15");
+    if(!record)return {available:false,error:false,reason:"No official statement uploaded."};
+    const rows=Array.isArray(cash)?cash:[];
+    const byId=new Map(rows.map(x=>[Number(x.id),x]));
+    const charges=Array.isArray(record.payload?.charges)?record.payload.charges:[];
+    const observed=new Set();
+    const verified=charges.map(line=>{
+      const id=Number(line.ledger_id);
+      const r=byId.get(id);
+      const matched=Boolean(
+        r && id>0 && !observed.has(id) &&
+        string(r.currency).toUpperCase()==="IDR" &&
+        amount(r.expense_idr)===amount(line.amount_idr) &&
+        date(r.tanggal)===date(line.transaction_date) &&
+        string(r.note).includes("TKP-SHOT-")
+      );
+      if(matched)observed.add(id);
+      return {...line, matched};
+    });
+    const feeId=Number(record.payload?.e_statement_fee_ledger_id);
+    const fee=byId.get(feeId);
+    const feeMatched=Boolean(fee && feeId>0 &&
+      string(fee.currency)==="IDR" &&
+      amount(fee.expense_idr)===amount(record.payload?.e_statement_fee_idr) &&
+      date(fee.tanggal)===date(record.statement_date) &&
+      string(fee.note).includes("BRI-TK-STAT-20261015-FEE"));
+    const payId=Number(record.payload?.previous_payment_ledger_id);
+    const payment=byId.get(payId);
+    const priorPaymentMatched=Boolean(payment&&payId>0 &&
+      amount(payment.expense_idr)===-amount(record.payload?.previous_payment_idr) &&
+      string(payment.kategori_normalized)==="Card Settlement");
+    const purchaseTotal=charges.reduce((sum,line)=>sum+amount(line.amount_idr),0);
+    const allChargesMatched=verified.length===9 && verified.every(x=>x.matched);
+    const totalEquation=purchaseTotal + amount(record.payload?.e_statement_fee_idr)===amount(record.total_idr);
+    return {available:true,record,charges:verified,fee,feeMatched,priorPaymentMatched,
+      allChargesMatched,totalEquation,purchasesTotal:purchaseTotal,
+      matchedCharges:verified.filter(x=>x.matched).length,
+      checksPassed:allChargesMatched&&feeMatched&&priorPaymentMatched&&totalEquation,
+      cardAvailableCredit:Number(record.available_credit_idr),
+      usedCredit:amount(record.credit_limit_idr)-amount(record.available_credit_idr)};
+  }
+
   function ele(tag,cls,text){
     const n=document.createElement(tag);
     if(cls)n.className=cls;
@@ -129,7 +177,54 @@
     }
     if(!selected.length)parent.append(ele("p","tokopedia-proof-muted","No rows for this filter."));
   }
+
+  function renderOfficialStatement() {
+    const statement=reconcileStatement(source.statements,source.cash,source.statementError);
+    const section=document.getElementById("tokopedia-official-statement");
+    const missing=document.getElementById("tokopedia-official-missing");
+    if(!statement.available){
+      section?.classList.add("hidden");
+      if(missing) {
+        missing.classList.toggle("hidden",!statement.error);
+        missing.textContent=statement.error?statement.reason:"";
+      }
+      return statement;
+    }
+    section?.classList.remove("hidden");
+    missing?.classList.add("hidden");
+    const s=statement.record;
+    put("tokopedia-official-total",idr(s.total_idr));
+    put("tokopedia-official-due",date(s.due_date));
+    put("tokopedia-official-issued",date(s.statement_date));
+    put("tokopedia-official-minimum",idr(s.card_minimum_idr));
+    put("tokopedia-official-combined-minimum",idr(s.all_cards_minimum_idr));
+    put("tokopedia-official-purchases",statement.matchedCharges+"/9 · "+idr(statement.purchasesTotal));
+    put("tokopedia-official-fee",idr(s.payload?.e_statement_fee_idr));
+    put("tokopedia-official-credit",idr(s.available_credit_idr));
+    put("tokopedia-official-match",statement.checksPassed?
+      "Verified: 9 existing charges + 1 unique fee + prior repayment":
+      "Attention: one or more statement-to-ledger links need review");
+    put("tokopedia-official-status",
+      "Payment for this statement has not been verified. The card bill is a liability, not an extra purchase. "+
+      "The previous payment is recorded separately; do not confuse it with this billing period.");
+    const list=document.getElementById("tokopedia-official-lines");
+    if(list){
+      list.replaceChildren();
+      for(const line of statement.charges){
+        const row=ele("div","tokopedia-proof-pair");
+        row.append(ele("span","",line.description+" · "+line.transaction_date),
+          ele("strong","",idr(line.amount_idr)+(line.matched?" · linked":" · review")));
+        list.append(row);
+      }
+      const feeRow=ele("div","tokopedia-proof-pair");
+      feeRow.append(ele("span","","E-statement service fee · "+date(s.statement_date)),
+        ele("strong","",idr(s.payload?.e_statement_fee_idr)+(statement.feeMatched?" · linked":" · review")));
+      list.append(feeRow);
+    }
+    return statement;
+  }
   function render(){
+    const official=renderOfficialStatement();
     const m=reconcile(source.evidence,source.cash,source.error);
     const empty=document.getElementById("tokopedia-proof-unavailable");
     const content=document.getElementById("tokopedia-proof-content");
@@ -139,9 +234,12 @@
     }
     if(empty)empty.classList.add("hidden");
     if(content)content.classList.remove("hidden");
-    put("tokopedia-proof-limit",idr(m.limits.credit_limit_idr));
-    put("tokopedia-proof-used",idr(m.limits.used_idr));
-    put("tokopedia-proof-available",idr(m.limits.available_idr));
+    put("tokopedia-proof-limit",idr(official.available?
+      official.record.credit_limit_idr:m.limits.credit_limit_idr));
+    put("tokopedia-proof-used",idr(official.available?
+      official.usedCredit:m.limits.used_idr));
+    put("tokopedia-proof-available",idr(official.available?
+      official.cardAvailableCredit:m.limits.available_idr));
     put("tokopedia-proof-posted",m.counts.posted+" · "+idr(m.totals.posted));
     put("tokopedia-proof-imports",m.counts.imported+" · "+idr(m.totals.imported));
     put("tokopedia-proof-missing",m.counts.missing+" · "+idr(m.totals.missing));
@@ -158,7 +256,9 @@
   }
   function setData(data={}) {
     source={evidence:Array.isArray(data.evidence)?data.evidence:[],
-      cash:Array.isArray(data.cash)?data.cash:[],error:!!data.loadError};
+      cash:Array.isArray(data.cash)?data.cash:[],error:!!data.loadError,
+      statements:Array.isArray(data.statements)?data.statements:[],
+      statementError:!!data.statementLoadError};
     render();
   }
   function init(){
@@ -183,5 +283,5 @@
   }
   if(typeof window!=="undefined")window.FinanceTokopediaProof={init,setData,render};
   if(typeof module!=="undefined"&&module.exports)
-    module.exports={snapshotForTest:reconcile};
+    module.exports={snapshotForTest:reconcile,statementForTest:reconcileStatement};
 })();

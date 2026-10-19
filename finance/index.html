@@ -16,7 +16,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.min.js"></script>
     <!-- Public Neon endpoints live in config.js; database credentials never ship to the browser. -->
     <script src="config.js?v=4.0.1"></script>
-    <script type="module" src="cloud.js?v=5.9.0"></script>
+    <script type="module" src="cloud.js?v=6.0.0"></script>
     <link rel="stylesheet" href="styles.css?v=4.9.1">
     <link rel="stylesheet" href="features/transaction-editor.css?v=5.6.0">
     <link rel="stylesheet" href="features/transaction-history.css?v=4.5.0">
@@ -28,7 +28,7 @@
     <link rel="stylesheet" href="features/receipt-evidence.css?v=5.9.0">
     <link rel="stylesheet" href="features/account-evidence.css?v=5.3.0">
     <link rel="stylesheet" href="features/visa-review.css?v=5.4.0">
-    <link rel="stylesheet" href="features/tokopedia-proof.css?v=5.5.0">
+    <link rel="stylesheet" href="features/tokopedia-proof.css?v=6.0.0">
     <link rel="stylesheet" href="features/flow-audit.css?v=5.7.0">
     <link rel="stylesheet" href="features/transfer-proof.css?v=5.8.0">
     <script src="features/category-standards.js?v=5.6.0" defer></script>
@@ -45,8 +45,8 @@
     <script src="features/receipt-evidence.js?v=5.9.0" defer></script>
     <script src="features/account-evidence.js?v=5.3.0" defer></script>
     <script src="features/visa-review.js?v=5.4.0" defer></script>
-    <script src="features/tokopedia-proof.js?v=5.5.0" defer></script>
-    <script src="app.js?v=5.9.0" defer></script>
+    <script src="features/tokopedia-proof.js?v=6.0.0" defer></script>
+    <script src="app.js?v=6.0.0" defer></script>
 </head>
 <body class="dark-theme">
     <div id="auth-gate" class="auth-gate" aria-live="polite">
@@ -1225,15 +1225,35 @@
             <div id="view-tokopedia-proof" class="dashboard-view hidden">
               <section class="tokopedia-proof">
                 <div class="tokopedia-proof-head glass-panel">
-                  <span class="home-section-kicker">Tokopedia Card · screenshots · source-level reconciliation</span>
-                  <h2>Card Proof &amp; Installment Matching</h2>
-                  <p>Three app screenshots captured 14 Oct 2026. September entries visible in two screenshots appear once. Posted purchases and installments are separated from pending authorizations and card settlements. This is not a complete e-statement or a live balance feed.</p>
+                  <span class="home-section-kicker">Tokopedia Card · official statement + app screenshots</span>
+                  <h2>Statement &amp; Installment Matching</h2>
+                  <p>The official BRI statement dated 15 Oct 2026 is authoritative for that billing period. Earlier app screenshots show individual pending and posted transactions; their credit limits are historical snapshots, not a live balance feed. Purchases, fees and card repayments are tracked separately.</p>
                 </div>
                 <div id="tokopedia-proof-unavailable" class="tokopedia-proof-warning glass-panel">Loading private evidence…</div>
                 <div id="tokopedia-proof-content" class="hidden">
+                  <section id="tokopedia-official-statement" class="tokopedia-proof-panel glass-panel hidden" style="margin-bottom:1rem">
+                    <h3>Official BRI Tokopedia Card statement · October 2026</h3>
+                    <p class="tokopedia-proof-muted">Statement evidence extracted from the user-supplied PDF. The original document, password and full card number are not published or stored in this dashboard. Payment for this statement has not yet been verified.</p>
+                    <div class="tokopedia-official-grid">
+                      <div><span>Statement balance</span><strong id="tokopedia-official-total">—</strong></div>
+                      <div><span>Payment due</span><strong id="tokopedia-official-due">—</strong></div>
+                      <div><span>Minimum for this card</span><strong id="tokopedia-official-minimum">—</strong></div>
+                      <div><span>Combined minimum (statement summary)</span><strong id="tokopedia-official-combined-minimum">—</strong></div>
+                    </div>
+                    <div class="tokopedia-proof-pair"><span>Statement issued</span><strong id="tokopedia-official-issued">—</strong></div>
+                    <div class="tokopedia-proof-pair"><span>Existing charges matched</span><strong id="tokopedia-official-purchases">—</strong></div>
+                    <div class="tokopedia-proof-pair"><span>New e-statement fee</span><strong id="tokopedia-official-fee">—</strong></div>
+                    <div class="tokopedia-proof-pair"><span>Available card credit at statement date</span><strong id="tokopedia-official-credit">—</strong></div>
+                    <p id="tokopedia-official-match" class="tokopedia-proof-muted">Checking original IDR amounts and ledger links…</p>
+                    <p id="tokopedia-official-status" class="tokopedia-proof-muted"></p>
+                    <details class="tokopedia-official-details"><summary>View 10 statement charges and existing ledger matches</summary>
+                      <div id="tokopedia-official-lines"></div>
+                    </details>
+                  </section>
+                  <p id="tokopedia-official-missing" class="tokopedia-proof-muted hidden"></p>
                   <div class="tokopedia-proof-grid">
-                    <article class="tokopedia-proof-kpi glass-panel"><span>Credit limit</span><strong id="tokopedia-proof-limit">—</strong><small>Snapshot, not current verified bank balance</small></article>
-                    <article class="tokopedia-proof-kpi glass-panel"><span>Limit used</span><strong id="tokopedia-proof-used">—</strong><small>Credit usage includes obligations outside this partial screenshot</small></article>
+                    <article class="tokopedia-proof-kpi glass-panel"><span>Credit limit</span><strong id="tokopedia-proof-limit">—</strong><small>Latest official billing statement snapshot, when available</small></article>
+                    <article class="tokopedia-proof-kpi glass-panel"><span>Limit used</span><strong id="tokopedia-proof-used">—</strong><small>Total card usage, not this cycle's bill</small></article>
                     <article class="tokopedia-proof-kpi glass-panel"><span>Available credit</span><strong id="tokopedia-proof-available">—</strong><small>Credit limit minus used amount</small></article>
                   </div>
                   <div class="tokopedia-proof-meta" style="margin-top:1rem">
