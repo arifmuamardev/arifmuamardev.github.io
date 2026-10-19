@@ -213,6 +213,14 @@ test("bank mismatch blocks false paid confirmation",()=>{
 
 function bothFeesFixture(){
  const {statement,ledger}=officialFixture();
+ // Adjust synthetic purchase lines so the fixture's full bill is exactly
+ // Rp1,769,506, preserving the same Rp5,000 bank-payment spread.
+ const targetPurchases=1764506;
+ const currentPurchases=statement.payload.charges.reduce((sum,c)=>sum+c.amount_idr,0);
+ const adjustment=targetPurchases-currentPurchases;
+ statement.payload.charges[0].amount_idr+=adjustment;
+ ledger.find(x=>x.id===statement.payload.charges[0].ledger_id).expense_idr+=adjustment;
+ statement.total_idr=targetPurchases+5000;
  Object.assign(statement.payload,{
   payment_ledger_id:2063,payment_bni_id:757,payment_date:"2026-10-18",
   payment_bank_amount_idr:1774506,payment_statement_total_idr:statement.total_idr,
