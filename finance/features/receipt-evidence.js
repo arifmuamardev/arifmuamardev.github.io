@@ -22,19 +22,28 @@
       seen.add(key);
       const link=x.linked_ledger_id===null||x.linked_ledger_id===undefined
         ? null:cashById.get(Number(x.linked_ledger_id))||null;
-      const sourceFile=str(x.payload?.source_file);
+      const sourceFile=str(x.payload?.source_file||x.payload?.source_image);
       const expectedStored=type==="posted"? str(link?.note).includes(key):
         type==="already_recorded"?Boolean(link):false;
-      const linkOk=type==="pending"?x.linked_ledger_id==null:
+      const followup=x.payload?.details?.bank_confirmation;
+      const laterConfirmed=type==="pending" && followup?.status==="posted_to_BNI" &&
+        (Array.isArray(ledger)?ledger:[]).some(t=>str(t.note).includes(str(followup.topup_ledger_source)) &&
+          number(t.expense_idr)===number(followup.topup_amount_idr)) &&
+        (Array.isArray(ledger)?ledger:[]).some(t=>str(t.note).includes(str(followup.fee_ledger_source)) &&
+          number(t.expense_idr)===number(followup.fee_idr));
+      const linkOk=type==="pending"?x.linked_ledger_id==null && (!followup||laterConfirmed):
         Boolean(link)&&expectedStored;
       return {
         key,type,date:date(x.receipt_date),merchant:str(x.merchant),
         currency:str(x.source_currency),amount:number(x.source_amount),
         sourceFile,linkedId:link?Number(link.id):null,
         linkedAs:Number(x.linked_ledger_id),duplicateSource,
-        linkOk,verifiedAmount:type==="posted"&&link
-          ? (str(link.currency)==="IDR"?Math.abs(number(link.expense_idr)-number(x.source_amount))<=1:
-            Math.abs(number(link.pengeluaran)-number(x.source_amount))<=0.01)
+        linkOk,laterConfirmed,verifiedAmount:type==="posted"&&link
+          ? (str(link.currency)==="IDR"
+             ? (str(link.kategori_normalized)==="Card Settlement"
+                ? Math.abs(number(link.expense_idr)+number(x.source_amount))<=1
+                : Math.abs(number(link.expense_idr)-number(x.source_amount))<=1)
+             : Math.abs(number(link.pengeluaran)-number(x.source_amount))<=0.01)
           : null
       };
     }).sort((a,b)=>b.date.localeCompare(a.date)||a.key.localeCompare(b.key));
@@ -75,10 +84,12 @@
       copy.append(node("small","",item.date+" · "+money(item.currency,item.amount)));
       const type=item.type==="posted"?"Imported":
         item.type==="already_recorded"?"Already recorded":
-        item.type==="pending"?"Pending in screenshot":"Review";
+        item.type==="pending"?(item.laterConfirmed?"Pending at capture → BNI confirmed":"Pending in screenshot"):"Review";
       copy.append(node("small","",type+(item.sourceFile?" · source: "+item.sourceFile:"")));
       if(item.type==="pending")
-        copy.append(node("small","", "No ledger expense was added; check whether it settled later."));
+        copy.append(node("small","", item.laterConfirmed
+          ? "Confirmed as separate e-wallet top-up and fee; not an additional purchase."
+          : "No ledger expense was added; check whether it settled later."));
       container.append(copy);
       if(item.linkedId!==null) {
         const btn=node("button","receipt-evidence-action","View ledger #"+item.linkedId);

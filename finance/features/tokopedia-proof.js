@@ -3,7 +3,7 @@
 
   // Bank-app screenshots are evidence, not a live card feed or final e-statement.
   // A source row is consumed at most once, regardless of overlapping screenshots.
-  let source = { evidence: [], cash: [], error: false, statements: [], statementError: false };
+  let source = { evidence: [], cash: [], bni: [], error: false, statements: [], statementError: false };
   let filter = "all";
   const amount = x => Number(x) || 0;
   const string = x => String(x ?? "");
@@ -89,7 +89,7 @@
 
   // Official PDF statement is a fixed billing-period snapshot, not a live balance.
   // Link exact original IDR values to already imported screenshot records.
-  function reconcileStatement(statements,cash,loadError=false) {
+  function reconcileStatement(statements,cash,loadError=false,bni=[]) {
     if(loadError)return {available:false,error:true,reason:"Official billing data could not be loaded."};
     const record=(Array.isArray(statements)?statements:[])
       .find(x=>x.evidence_key==="BRI-TOKOPEDIA-STATEMENT-2026-10-15");
@@ -126,7 +126,25 @@
     const purchaseTotal=charges.reduce((sum,line)=>sum+amount(line.amount_idr),0);
     const allChargesMatched=verified.length===9 && verified.every(x=>x.matched);
     const totalEquation=purchaseTotal + amount(record.payload?.e_statement_fee_idr)===amount(record.total_idr);
+    const paidCash=byId.get(Number(record.payload?.payment_ledger_id));
+    const bank=(Array.isArray(bni)?bni:[]).find(x=>Number(x.id)===Number(record.payload?.payment_bni_id));
+    const bankAmount=amount(record.payload?.payment_bank_amount_idr);
+    const paymentDate=date(record.payload?.payment_date);
+    const paymentDifference=bankAmount-amount(record.total_idr);
+    const currentPaymentMatched=Boolean(
+      paidCash && bank && bankAmount>0 &&
+      string(paidCash.currency)==="IDR" && string(paidCash.kategori_normalized)==="Card Settlement" &&
+      amount(paidCash.expense_idr)===-bankAmount &&
+      date(paidCash.tanggal)===paymentDate &&
+      string(paidCash.note).includes("BNI-SCREEN-20261018-TOKOPEDIA-1774506") &&
+      string(bank.sign)==="-" && amount(bank.amount)===bankAmount &&
+      date(bank.date)===paymentDate &&
+      /TOKOPEDIA/i.test(string(bank.description)) &&
+      amount(record.payload?.payment_statement_total_idr)===amount(record.total_idr) &&
+      amount(record.payload?.payment_difference_idr)===paymentDifference
+    );
     return {available:true,record,charges:verified,fee,feeMatched,priorPaymentMatched,
+      currentPaymentMatched,paymentAmount:bankAmount,paymentDifference,paymentDate,
       allChargesMatched,totalEquation,purchasesTotal:purchaseTotal,
       matchedCharges:verified.filter(x=>x.matched).length,
       checksPassed:allChargesMatched&&feeMatched&&priorPaymentMatched&&totalEquation,
@@ -179,7 +197,7 @@
   }
 
   function renderOfficialStatement() {
-    const statement=reconcileStatement(source.statements,source.cash,source.statementError);
+    const statement=reconcileStatement(source.statements,source.cash,source.statementError,source.bni);
     const section=document.getElementById("tokopedia-official-statement");
     const missing=document.getElementById("tokopedia-official-missing");
     if(!statement.available){
@@ -204,9 +222,13 @@
     put("tokopedia-official-match",statement.checksPassed?
       "Verified: 9 existing charges + 1 unique fee + prior repayment":
       "Attention: one or more statement-to-ledger links need review");
-    put("tokopedia-official-status",
-      "Payment for this statement has not been verified. The card bill is a liability, not an extra purchase. "+
-      "The previous payment is recorded separately; do not confuse it with this billing period.");
+    put("tokopedia-official-status",statement.currentPaymentMatched
+      ? "PAID via BNI virtual account on "+statement.paymentDate+". Bank debit "+
+        idr(statement.paymentAmount)+" against statement "+idr(s.total_idr)+
+        ". Difference "+idr(statement.paymentDifference)+
+        " remains unexplained; no extra fee was invented. The card payment is a settlement, not new spending."
+      : "This statement's settlement is not verified by linked bank and ledger records. "+
+        "Card purchases and the previous month's payment are tracked separately.");
     const list=document.getElementById("tokopedia-official-lines");
     if(list){
       list.replaceChildren();
@@ -258,6 +280,7 @@
     source={evidence:Array.isArray(data.evidence)?data.evidence:[],
       cash:Array.isArray(data.cash)?data.cash:[],error:!!data.loadError,
       statements:Array.isArray(data.statements)?data.statements:[],
+      bni:Array.isArray(data.bni)?data.bni:[],
       statementError:!!data.statementLoadError};
     render();
   }

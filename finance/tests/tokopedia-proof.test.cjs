@@ -173,3 +173,40 @@ test("statement available credit is not equal to amount due",()=>{
  assert.equal(m.usedCredit,9929678);
  assert.notEqual(m.usedCredit,statement.total_idr);
 });
+
+test("October statement PAID only with actual BNI debit and neutral ledger settlement",()=>{
+ const {statement,ledger}=officialFixture();
+ statement.payload={...statement.payload,
+  payment_ledger_id:2063,payment_bni_id:757,payment_date:"2026-10-18",
+  payment_bank_amount_idr:1774506,payment_statement_total_idr:statement.total_idr,
+  payment_difference_idr:1774506-statement.total_idr};
+ ledger.push({id:2063,currency:"IDR",tanggal:"2026-10-18",expense_idr:-1774506,
+  kategori_normalized:"Card Settlement",note:"BNI-SCREEN-20261018-TOKOPEDIA-1774506"});
+ const bni=[{id:757,date:"2026-10-18",sign:"-",amount:1774506,description:"TOKOPEDIA - PLSTOKOPEDIAARIF"}];
+ const result=statementForTest([statement],ledger,false,bni);
+ assert.equal(result.currentPaymentMatched,true);
+ assert.equal(result.paymentDifference,1774506-statement.total_idr);
+ assert.equal(result.charges.length,9);
+ assert.equal(result.checksPassed,true);
+});
+test("card settlement is not marked paid without corroborating BNI statement row",()=>{
+ const {statement,ledger}=officialFixture();
+ statement.payload.payment_ledger_id=2063;statement.payload.payment_bni_id=757;
+ statement.payload.payment_date="2026-10-18";statement.payload.payment_bank_amount_idr=1774506;
+ statement.payload.payment_statement_total_idr=statement.total_idr;
+ statement.payload.payment_difference_idr=1774506-statement.total_idr;
+ ledger.push({id:2063,tanggal:"2026-10-18",currency:"IDR",expense_idr:-1774506,
+  kategori_normalized:"Card Settlement",note:"BNI-SCREEN-20261018-TOKOPEDIA-1774506"});
+ assert.equal(statementForTest([statement],ledger,false,[]).currentPaymentMatched,false);
+});
+test("bank mismatch blocks false paid confirmation",()=>{
+ const {statement,ledger}=officialFixture();
+ Object.assign(statement.payload,{payment_ledger_id:2063,payment_bni_id:757,
+  payment_date:"2026-10-18",payment_bank_amount_idr:1774506,
+  payment_statement_total_idr:statement.total_idr,
+  payment_difference_idr:1774506-statement.total_idr});
+ ledger.push({id:2063,tanggal:"2026-10-18",currency:"IDR",expense_idr:-1774506,
+  kategori_normalized:"Card Settlement",note:"BNI-SCREEN-20261018-TOKOPEDIA-1774506"});
+ const bni=[{id:757,date:"2026-10-18",sign:"-",amount:1769506,description:"TOKOPEDIA"}];
+ assert.equal(statementForTest([statement],ledger,false,bni).currentPaymentMatched,false);
+});
