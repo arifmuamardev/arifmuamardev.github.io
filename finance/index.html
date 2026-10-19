@@ -16,7 +16,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.min.js"></script>
     <!-- Public Neon endpoints live in config.js; database credentials never ship to the browser. -->
     <script src="config.js?v=4.0.1"></script>
-    <script type="module" src="cloud.js?v=6.0.0"></script>
+    <script type="module" src="cloud.js?v=6.3.0"></script>
     <link rel="stylesheet" href="styles.css?v=4.9.1">
     <link rel="stylesheet" href="features/transaction-editor.css?v=5.6.0">
     <link rel="stylesheet" href="features/transaction-history.css?v=4.5.0">
@@ -27,6 +27,7 @@
     <link rel="stylesheet" href="features/data-integrity.css?v=5.2.0">
     <link rel="stylesheet" href="features/receipt-evidence.css?v=5.9.0">
     <link rel="stylesheet" href="features/account-evidence.css?v=5.3.0">
+    <link rel="stylesheet" href="features/jp-post-account.css?v=1.0.0">
     <link rel="stylesheet" href="features/visa-review.css?v=5.4.0">
     <link rel="stylesheet" href="features/tokopedia-proof.css?v=6.0.0">
     <link rel="stylesheet" href="features/flow-audit.css?v=5.7.0">
@@ -43,10 +44,11 @@
     <script src="features/forecast.js?v=5.7.0" defer></script>
     <script src="features/data-integrity.js?v=5.2.0" defer></script>
     <script src="features/receipt-evidence.js?v=6.1.0" defer></script>
-    <script src="features/account-evidence.js?v=5.3.0" defer></script>
+    <script src="features/account-evidence.js?v=6.0.0" defer></script>
+    <script src="features/jp-post-account.js?v=1.0.0" defer></script>
     <script src="features/visa-review.js?v=5.4.0" defer></script>
     <script src="features/tokopedia-proof.js?v=6.2.0" defer></script>
-    <script src="app.js?v=6.1.0" defer></script>
+    <script src="app.js?v=6.3.0" defer></script>
 </head>
 <body class="dark-theme">
     <div id="auth-gate" class="auth-gate" aria-live="polite">
@@ -156,6 +158,7 @@
                     <div class="sidebar-disclosure-content">
                         <button class="nav-btn" data-target="view-bni-account"><i class="fa-solid fa-building-columns"></i><span>BNI</span></button>
                         <button class="nav-btn" data-target="view-muamalat-account"><i class="fa-solid fa-building-columns"></i><span>Muamalat</span></button>
+                        <button class="nav-btn" data-target="view-jp-post-account"><i class="fa-solid fa-building-columns"></i><span>Japan Post Bank</span></button>
                         <button class="nav-btn" data-target="view-gopay-account"><i class="fa-solid fa-wallet"></i><span>GoPay</span></button>
                         <button class="nav-btn" data-target="view-withdrawals"><i class="fa-solid fa-money-bill-transfer"></i><span>ATM Activity</span></button>
                     </div>
@@ -1553,6 +1556,45 @@
                 </section>
             </div>
 
+            <!-- Japan Post Bank: verified source balance separate from JPY ledger -->
+            <div id="view-jp-post-account" class="dashboard-view hidden">
+                <section class="jp-post-shell">
+                    <header class="jp-post-header glass-panel">
+                        <div class="jp-post-headline">
+                            <div class="jp-post-emblem" aria-hidden="true"><i class="fa-solid fa-building-columns"></i></div>
+                            <div><span class="home-section-kicker">JAPAN · JPY SAVINGS</span><h2>Japan Post Bank</h2>
+                                <p>Account ending 7861 · historical statement snapshots · read-only.</p></div>
+                        </div>
+                        <p class="jp-post-asof" id="jp-post-asof">Loading bank history…</p>
+                    </header>
+                    <p class="jp-post-error hidden" id="jp-post-load-error" role="alert"></p>
+                    <div id="jp-post-data" class="hidden">
+                        <div class="jp-post-kpis">
+                            <article class="jp-post-kpi jp-post-kpi-main glass-panel"><span>Last verified account balance</span><strong id="jp-post-balance">—</strong><small id="jp-post-balance-caption">Not real-time</small></article>
+                            <article class="jp-post-kpi glass-panel"><span>Statement entries</span><strong id="jp-post-count">—</strong><small>Uploaded bank screenshot records</small></article>
+                            <article class="jp-post-kpi glass-panel"><span>Balance continuity</span><strong id="jp-post-checks">—</strong><small id="jp-post-checks-detail">Consecutive bank checkpoints</small></article>
+                            <article class="jp-post-kpi glass-panel"><span>October apartment rent</span><strong id="jp-post-rent">—</strong><small id="jp-post-rent-note">Life Card direct debit</small></article>
+                        </div>
+                        <div class="jp-post-info glass-panel">
+                            <p><strong>Account-specific history:</strong> This is not the overall JPY ledger, Hokkoku Bank, or physical cash. Bank movements and card payments are not automatically new purchases.</p>
+                            <p id="jp-post-coverage"></p>
+                        </div>
+                        <section class="jp-post-list glass-panel">
+                            <div class="jp-post-toolbar">
+                                <div><h3>Statement history</h3><p>Original signed transactions and balances after each transaction</p></div>
+                                <div class="jp-post-filters">
+                                    <label>Month<select id="jp-post-month"><option value="all">All months</option></select></label>
+                                    <label>Type<select id="jp-post-type"><option value="all">All</option><option value="in">Money in</option><option value="out">Money out</option><option value="rent">Life Card rent</option></select></label>
+                                    <label>Search<input type="search" id="jp-post-search" placeholder="Search statement" autocomplete="off"></label>
+                                </div>
+                            </div>
+                            <p id="jp-post-empty" class="jp-post-empty hidden">No matching bank entries.</p>
+                            <div id="jp-post-rows" class="jp-post-rows" aria-live="polite"></div>
+                        </section>
+                    </div>
+                </section>
+            </div>
+
             <!-- View 5B: BNI Account Tracker -->
             <div id="view-bni-account" class="dashboard-view hidden">
                 <!-- Controls: Statement selector & filters -->
@@ -2281,11 +2323,11 @@
                         <article class="account-evidence-kpi glass-panel"><span>JPY transfer-related markers</span><strong id="account-evidence-movement-total">—</strong><small id="account-evidence-movement-note">Not paired to accounts</small></article>
                     </div>
                     <div class="account-evidence-warning glass-panel">
-                        <strong>Do not add these balances together.</strong> The JPY ledger balance may already reflect money movements involving the Indonesian accounts, ATM withdrawals and card settlements. JP Post Bank, Hokuriku Bank, and physical cash do not have separately synchronized statement balances here. Recorded balances are historic snapshots, not real-time bank balances.
+                        <strong>Do not add these balances together.</strong> The JPY ledger balance may already reflect money movements involving the Indonesian accounts, ATM withdrawals and card settlements. Japan Post Bank now has verified historical snapshots under Accounts; Hokkoku Bank and physical cash still need independent balance statements. Recorded balances are historic snapshots, not real-time bank balances.
                     </div>
                     <section class="account-evidence-section glass-panel">
-                        <h3>Japan · requires manually verified balances</h3>
-                        <p>The existing Reconciliation form asks for all three accounts. No reliable account-by-account current balances are available from the linked transaction tables. Review actual account statements before recording any adjustment.</p>
+                        <h3>Japan · bank history and manual verification</h3>
+                        <p>Japan Post Bank has separately verified historical source balances. Hokkoku Bank and cash still lack separately imported statements; manual Reconciliation requires current verified balances for all three.</p>
                         <div id="account-evidence-japan" class="account-evidence-manual-grid"></div>
                         <button type="button" class="account-evidence-link" data-account-nav="view-reconciliation">Open manual Reconciliation (writes only after explicit confirmation) →</button>
                     </section>
@@ -2313,8 +2355,8 @@
                         </section>
                         <aside class="account-evidence-section glass-panel">
                             <h3>What this can and cannot establish</h3>
-                            <p>This view gives source-separated evidence and balance continuity checks. It does not connect Japan Post Bank or Hokuriku accounts to ledger rows, establish which ATM source funds which destination, convert current balances using live FX, or prove that missing statement lines are fraudulent. Compare records and receipts before making a manual reconciliation adjustment.</p>
-                            <p>All calculations run locally from existing authenticated data; no new Neon tables or API write operations are introduced.</p>
+                            <p>This view gives source-separated evidence and balance continuity checks. Japan Post Bank entries can be matched to explicitly source-marked ledger records, but the data does not establish all bank movements, current Hokkoku balances, cash ownership, or live FX rates. Compare records and receipts before making a manual reconciliation adjustment.</p>
+                            <p>All account analyses are read-only; reviewing these pages makes no new Neon writes.</p>
                         </aside>
                     </div>
                 </section>

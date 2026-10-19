@@ -1417,6 +1417,7 @@ function setupTransactionWorkspace() {
     window.FinanceIntegrity?.init();
     window.FinanceReceiptEvidence?.init();
     window.FinanceAccountEvidence?.init();
+    window.FinanceJPPost?.init();
     window.FinanceVisaReview?.init();
     window.FinanceTokopediaProof?.init();
     window.FinanceFlowAudit?.init();
@@ -1712,7 +1713,13 @@ async function fetchAndInitData() {
             withdrawals: withdrawalsData,
             bni: bniData,
             muamalat: muamalatData,
-            gopay: gopayData
+            gopay: gopayData,
+            jpPost: payload.jpPost
+        });
+        window.FinanceJPPost?.setData({
+            rows: payload.jpPost,
+            cash: cashData,
+            loadError: payload.jpPostLoadError
         });
         window.FinanceVisaReview?.setData({
             cash: cashData,
@@ -1822,6 +1829,9 @@ function initNavigation() {
                 } else if (targetViewId === "view-bni-account") {
                     topBarTitle.textContent = "BNI Account Tracker";
                     topBarDesc.textContent = "IDR transactions and taplus savings";
+                } else if (targetViewId === "view-jp-post-account") {
+                    topBarTitle.textContent = "Japan Post Bank";
+                    topBarDesc.textContent = "Verified savings balance, rent, and JPY statement transactions";
                 } else if (targetViewId === "view-muamalat-account") {
                     topBarTitle.textContent = "Bank Muamalat Tracker";
                     topBarDesc.textContent = "IDR savings and SMS banking transactions";
@@ -1917,6 +1927,8 @@ function initNavigation() {
                 updateBniAccountView();
                 if (bniTrendChart) bniTrendChart.resize();
                 if (bniTypeChart) bniTypeChart.resize();
+            } else if (targetViewId === "view-jp-post-account") {
+                window.FinanceJPPost?.render();
             } else if (targetViewId === "view-muamalat-account") {
                 updateMuamalatAccountView();
                 if (muamalatTrendChart) muamalatTrendChart.resize();
