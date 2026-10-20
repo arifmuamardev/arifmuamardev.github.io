@@ -1116,7 +1116,7 @@ function renderCategoryPieChart(filteredData, colors) {
         }
     });
 
-    const sortedCategories = Object.entries(categoriesSum)
+    const sortedCategories = Object.entries(categoriesSum).filter(([,total]) => total > 0)
         .sort((a, b) => b[1] - a[1])
         .slice(0, 8); // top 8 categories
 
@@ -3928,7 +3928,7 @@ function renderExpenseCategoryChart(filteredData, colors) {
         }
     });
 
-    const sorted = Object.entries(categoriesSum).sort((a, b) => b[1] - a[1]).slice(0, 8);
+    const sorted = Object.entries(categoriesSum).filter(([,total]) => total > 0).sort((a, b) => b[1] - a[1]).slice(0, 8);
     const labels = sorted.map(c => c[0]);
     const data = sorted.map(c => c[1]);
 
@@ -4267,7 +4267,7 @@ let simBaselineRent = 45228;
 let simBaselineUtilities = 7377;
 
 function updateInsightsPage(filteredData) {
-    const source = cashData.length ? cashData : filteredData;
+    const source = getPostedTransactions(cashData.length ? cashData : filteredData);
     if (!source.length) return;
 
     const monthKey = item => String(item?.tanggal || "").slice(0, 7);
@@ -4282,26 +4282,27 @@ function updateInsightsPage(filteredData) {
     const analysisRows = source.filter(item => analysisKeys.includes(monthKey(item)));
 
     const validExpense = item =>
-        (Number(item.pengeluaran) || 0) > 0 &&
+        (Number(item.pengeluaran) || 0) !== 0 &&
         !isExcludedTransfer(item);
     const validIncome = item =>
         (Number(item.pemasukan) || 0) > 0 &&
-        !isExcludedTransfer(item);
-
-    const sumExpenses = rows => rows.filter(validExpense).reduce((s,item)=>s+(Number(item.pengeluaran)||0),0);
-    const sumIncome = rows => rows.filter(validIncome).reduce((s,item)=>s+(Number(item.pemasukan)||0),0);
+        window.FinanceFlowClassifier?.classify(item).kind === "income";
+    // All overview/insights totals use the same net-spending rules:
+    // reversals reduce costs, settlements and internal movements are excluded.
+    const report = rows => window.FinanceFlowClassifier.report(rows);
+    const sumExpenses = rows => report(rows).spending;
+    const sumIncome = rows => report(rows).income;
 
     const recentRows = source.filter(item => monthKey(item) === recentKey);
     const previousRows = previousKey ? source.filter(item => monthKey(item) === previousKey) : [];
     const recentSpending = sumExpenses(recentRows);
     const previousSpending = sumExpenses(previousRows);
 
-    const categoryTotals = {};
-    analysisRows.filter(validExpense).forEach(item => {
-        const category = item.kategori_normalized || item.kategori || "Others";
-        categoryTotals[category] = (categoryTotals[category] || 0) + (Number(item.pengeluaran) || 0);
-    });
-    const categoryRank = Object.entries(categoryTotals).sort((a,b)=>b[1]-a[1]);
+    const categoryTotals = report(analysisRows).categoryTotals;
+    // The category chart compares positive category net totals; an isolated
+    // refund-only category must not produce a negative pie slice or >100% share.
+    const categoryRank = Object.entries(categoryTotals)
+        .filter(([,value]) => value > 0).sort((a,b)=>b[1]-a[1]);
     const specificCategoryRank = categoryRank.filter(([name]) => String(name).toLowerCase() !== "others");
     const topCategory = specificCategoryRank[0] || categoryRank[0] || ["—",0];
     const analysisExpense = categoryRank.reduce((s,[,value])=>s+value,0);
