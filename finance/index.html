@@ -38,9 +38,9 @@
     <script src="features/transaction-editor.js?v=5.6.0" defer></script>
     <script src="features/transaction-history.js?v=4.5.0" defer></script>
     <script src="features/data-tools.js?v=4.7.0" defer></script>
-    <script src="features/monthly-budget.js?v=5.7.0" defer></script>
-    <script src="features/monthly-review.js?v=5.7.0" defer></script>
-    <script src="features/flow-classifier.js?v=5.7.0" defer></script>
+    <script src="features/monthly-budget.js?v=5.8.0" defer></script>
+    <script src="features/monthly-review.js?v=5.8.0" defer></script>
+    <script src="features/flow-classifier.js?v=5.8.0" defer></script>
     <script src="features/flow-audit.js?v=5.7.0" defer></script>
     <script src="features/transfer-proof.js?v=5.8.0" defer></script>
     <script src="features/multi-account-reconciliation.js?v=1.0.0" defer></script>
@@ -53,7 +53,7 @@
     <script src="features/gopay-reconciliation.js?v=1.0.0" defer></script>
     <script src="features/visa-review.js?v=5.4.0" defer></script>
     <script src="features/tokopedia-proof.js?v=6.2.0" defer></script>
-    <script src="app.js?v=6.6.0" defer></script>
+    <script src="app.js?v=6.7.0" defer></script>
 </head>
 <body class="dark-theme">
     <div id="auth-gate" class="auth-gate" aria-live="polite">
@@ -239,7 +239,7 @@
                         <div class="home-hero-copy">
                             <span class="home-eyebrow" id="home-period-label">This month</span>
                             <h1 id="home-greeting">Your money at a glance</h1>
-                            <p>Monthly spending now separates purchases from account transfers, card repayments, loans and balance adjustments. The recorded balance is a ledger snapshot, not verified combined net worth.</p>
+                            <p>Net spending includes recorded purchases and subtracts refunds/reversals. Internal transfers, card repayments, loans and balance adjustments are kept separate. Account balances are historical ledger snapshots, not combined net worth.</p>
                         </div>
                         <div class="home-balance-block">
                             <span class="home-balance-label">Recorded balance</span>
@@ -255,7 +255,7 @@
                             <small id="home-income-note">This month</small>
                         </article>
                         <article class="home-stat glass-panel">
-                            <span class="home-stat-label">Spending</span>
+                            <span class="home-stat-label">Net spending</span>
                             <strong class="home-stat-value expense" id="home-month-spending">¥0</strong>
                             <small id="home-spending-note">This month</small>
                         </article>
@@ -451,7 +451,7 @@
                     <div class="chart-container glass-panel">
                         <div class="chart-header">
                             <h2><i class="fa-solid fa-chart-pie"></i> Expense by Category</h2>
-                            <span class="chart-desc">Cash distribution</span>
+                            <span class="chart-desc">Positive net categories · refunds deducted</span>
                         </div>
                         <div class="chart-wrapper">
                             <canvas id="category-pie-chart"></canvas>
@@ -466,7 +466,7 @@
                         <div>
                             <span class="home-section-kicker">Plan vs actual</span>
                             <h2>Monthly Budget</h2>
-                            <p>Set category targets for a month, compare them with posted spending, and use recent history only as an optional reference—not an automatic decision.</p>
+                            <p>Set category targets and compare them with posted net spending after refunds. Transfers and card repayments do not consume budgets. Historical suggestions are optional, never automatic decisions.</p>
                         </div>
                         <label class="budget-month-control">
                             <span>Budget month</span>
@@ -481,7 +481,7 @@
                             <small id="budget-month-title">Current month</small>
                         </article>
                         <article class="budget-summary-card glass-panel">
-                            <span>Spent within budgeted categories</span>
+                            <span>Net spent within budgeted categories</span>
                             <strong id="budget-spent-total">¥0</strong>
                             <small id="budget-actual-scope">Posted transactions</small>
                         </article>
@@ -493,7 +493,7 @@
                         <article class="budget-summary-card glass-panel">
                             <span>Actual spending covered</span>
                             <strong id="budget-coverage">0%</strong>
-                            <small>Share of actual expenses inside budgeted categories</small>
+                            <small>Share of positive net category spending covered by targets</small>
                         </article>
                     </section>
 
@@ -553,7 +553,7 @@
                         <div>
                             <span class="home-section-kicker">Month-end review</span>
                             <h2>Monthly Review</h2>
-                            <p>Close a month with one evidence-based view of income, spending, net position, category mix, budget variance, and the transactions that mattered most.</p>
+                            <p>Review recorded income, net spending after reversals, category mix and budget variance. Internal transfers and card settlements are excluded from spending, but unresolved transfers still need attention.</p>
                         </div>
                         <div class="review-controls">
                             <label class="review-month-control">
@@ -571,7 +571,7 @@
                             <small id="review-income-change">No prior-month baseline</small>
                         </article>
                         <article class="review-summary-card glass-panel">
-                            <span>Spending</span>
+                            <span>Net spending</span>
                             <strong id="review-spending">¥0</strong>
                             <small id="review-spending-change">No prior-month baseline</small>
                         </article>

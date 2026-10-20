@@ -56,8 +56,8 @@
   function isExpense(item) {
     const classifier=typeof window!=="undefined" ? window.FinanceFlowClassifier :
       (typeof require!=="undefined" ? require("./flow-classifier.js") : null);
-    if(classifier)return amount(item?.pengeluaran)>0 && classifier.classify(item).kind==="spending";
-    return amount(item?.pengeluaran) > 0 &&
+    if(classifier)return amount(item?.pengeluaran)!==0 && classifier.classify(item).kind==="spending";
+    return amount(item?.pengeluaran) !== 0 &&
       !EXCLUDED_ITEMS.has(String(item?.item_normalized || item?.item || ""));
   }
 
@@ -142,12 +142,16 @@
     const targets = selectedBudgets();
     const planned = targets.reduce((sum, b) => sum + amount(b.amount), 0);
     const spent = targets.reduce((sum, b) => sum + (actualMap.get(b.category) || 0), 0);
-    const totalActual = [...actualMap.values()].reduce((sum, value) => sum + value, 0);
+    // A refund-only category is a credit, not a negative slice of the budget
+    // coverage denominator. Coverage refers to positive net category spending.
+    const positiveActual = [...actualMap.values()].reduce((sum,v)=>sum+Math.max(0,v),0);
+    const positiveBudgeted = targets.reduce((sum,b)=>
+      sum+Math.max(0,actualMap.get(b.category)||0),0);
     const remaining = planned - spent;
-    const coverage = totalActual > 0 ? spent / totalActual * 100 : (planned > 0 ? 100 : 0);
+    const coverage = positiveActual > 0 ? positiveBudgeted / positiveActual * 100 : 0;
 
     setText("budget-planned-total", `¥${formatMoney(planned)}`);
-    setText("budget-spent-total", `¥${formatMoney(spent)}`);
+    setText("budget-spent-total", `${spent<0?"−":""}¥${formatMoney(Math.abs(spent))}`);
     setText("budget-remaining-total", `${remaining < 0 ? "−" : ""}¥${formatMoney(Math.abs(remaining))}`);
     setText("budget-coverage", `${coverage.toFixed(0)}%`);
     setText("budget-month-title", monthLabel(selectedMonth));
@@ -184,7 +188,7 @@
       const target = amount(budget.amount);
       const spent = actualMap.get(budget.category) || 0;
       const remaining = target - spent;
-      const ratio = target > 0 ? spent / target : 0;
+      const ratio = target > 0 ? Math.max(0,spent) / target : 0;
 
       const card = document.createElement("article");
       card.className = "budget-row";
@@ -196,7 +200,7 @@
       const title = document.createElement("strong");
       title.textContent = budget.category;
       const meta = document.createElement("span");
-      meta.textContent = `Spent ¥${formatMoney(spent)} · ${remaining >= 0 ? "Remaining" : "Over"} ¥${formatMoney(Math.abs(remaining))}`;
+      meta.textContent = `Net spent ${spent<0?"−":""}¥${formatMoney(Math.abs(spent))} · ${remaining >= 0 ? "Remaining" : "Over"} ¥${formatMoney(Math.abs(remaining))}`;
       copy.append(title, meta);
 
       const percent = document.createElement("span");
@@ -460,7 +464,7 @@
     const details = targets.map(b => {
       const target = amount(b.amount);
       const spent = actualMap.get(b.category) || 0;
-      const ratio = target > 0 ? spent / target : 0;
+      const ratio = target > 0 ? Math.max(0,spent) / target : 0;
       return {
         category: b.category,
         target,

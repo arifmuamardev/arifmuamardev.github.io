@@ -92,7 +92,42 @@
     };
   }
 
-  const api={classify,tally};
+  // Canonical view of household spending for KPIs, insights, budgets and reviews.
+  // Amounts are the ledger's saved JPY equivalents. Source-account statement rows
+  // are *not* imported here: they are evidence for the same transaction.
+  // Negative expense entries are reversals/refunds and reduce net spending.
+  function report(rows=[],asOf=null) {
+    const postedRows=(Array.isArray(rows)?rows:[]).filter(r=>!asOf || posted(r,asOf));
+    const spendRows=[], incomeRows=[], categoryTotals={};
+    let grossSpending=0, refunds=0, income=0;
+    for (const row of postedRows) {
+      const kind=classify(row).kind;
+      const out=amount(row.pengeluaran), incoming=amount(row.pemasukan);
+      if (kind===SPENDING && out!==0) {
+        spendRows.push(row);
+        if (out>0)grossSpending+=out;
+        else refunds-=out;
+        const key=category(row)||"Others";
+        categoryTotals[key]=(categoryTotals[key]||0)+out;
+      }
+      if (kind===INCOME && incoming!==0) {
+        incomeRows.push(row);
+        income+=incoming;
+      }
+    }
+    const round=n=>Math.round(n*100)/100;
+    return {
+      spending:round(grossSpending-refunds),
+      grossSpending:round(grossSpending),
+      refunds:round(refunds),
+      income:round(income),
+      spendingRows:spendRows,
+      incomeRows,
+      categoryTotals:Object.fromEntries(Object.entries(categoryTotals).map(([k,v])=>[k,round(v)]))
+    };
+  }
+
+  const api={classify,tally,report};
   if(typeof window!=="undefined")window.FinanceFlowClassifier=api;
   if(typeof module!=="undefined" && module.exports)module.exports=api;
 })();
