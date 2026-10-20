@@ -1418,6 +1418,7 @@ function setupTransactionWorkspace() {
     window.FinanceReceiptEvidence?.init();
     window.FinanceAccountEvidence?.init();
     window.FinanceJPPost?.init();
+    window.FinanceGoPayProof?.init();
     window.FinanceVisaReview?.init();
     window.FinanceTokopediaProof?.init();
     window.FinanceFlowAudit?.init();
@@ -1721,6 +1722,11 @@ async function fetchAndInitData() {
             cash: cashData,
             loadError: payload.jpPostLoadError
         });
+        window.FinanceGoPayProof?.setData({
+            gopay: gopayData,
+            receipts: payload.receiptEvidence,
+            loadError: payload.receiptEvidenceError
+        });
         window.FinanceVisaReview?.setData({
             cash: cashData,
             evidence: payload.cardEvidence,
@@ -1934,6 +1940,7 @@ function initNavigation() {
                 if (muamalatTrendChart) muamalatTrendChart.resize();
                 if (muamalatTypeChart) muamalatTypeChart.resize();
             } else if (targetViewId === "view-gopay-account") {
+                window.FinanceGoPayProof?.render();
                 updateGoPayAccountView();
                 if (gopayTrendChart) gopayTrendChart.resize();
                 if (gopayTypeChart) gopayTypeChart.resize();
@@ -5581,7 +5588,11 @@ function updateGoPayAccountView() {
         }
     });
     
-    const endingBalance = monthTxs.length > 0 ? monthTxs[monthTxs.length - 1].balance : 0;
+    // The official September PDF has no wallet closing-balance field.
+    const finalTx = monthTxs.length ? monthTxs[monthTxs.length - 1] : null;
+    const endingBalance = finalTx && finalTx.balance !== null &&
+        finalTx.balance !== undefined && Number.isFinite(Number(finalTx.balance))
+        ? Number(finalTx.balance) : null;
     
     let runningCoins = 0;
     let endingCoins = 0;
@@ -5602,10 +5613,12 @@ function updateGoPayAccountView() {
         }
         endingCoins = runningCoins;
     }
-    
+    // Coin spend allocations are not recorded per transaction in September.
+    if (selectedPeriod === "September 2026") endingCoins = null;
+
     const rate = getExchangeRate();
-    const endingBalanceJpy = endingBalance / rate;
-    const endingCoinsJpy = endingCoins / rate;
+    const endingBalanceJpy = endingBalance === null ? null : endingBalance / rate;
+    const endingCoinsJpy = endingCoins === null ? null : endingCoins / rate;
     const totalInflowJpy = totalInflow / rate;
     const totalOutflowJpy = totalOutflow / rate;
     
@@ -5618,10 +5631,10 @@ function updateGoPayAccountView() {
     const outIdrEl = document.getElementById("kpi-gopay-outflow-idr");
     const outJpyEl = document.getElementById("kpi-gopay-outflow-jpy");
     
-    if (balIdrEl) balIdrEl.textContent = formatCurrency(Math.round(endingBalance));
-    if (balJpyEl) balJpyEl.textContent = formatCurrency(Math.round(endingBalanceJpy));
-    if (coinsIdrEl) coinsIdrEl.textContent = formatCurrency(Math.round(endingCoins));
-    if (coinsJpyEl) coinsJpyEl.textContent = formatCurrency(Math.round(endingCoinsJpy));
+    if (balIdrEl) balIdrEl.textContent = endingBalance === null ? "—" : formatCurrency(Math.round(endingBalance));
+    if (balJpyEl) balJpyEl.textContent = endingBalanceJpy === null ? "—" : formatCurrency(Math.round(endingBalanceJpy));
+    if (coinsIdrEl) coinsIdrEl.textContent = endingCoins === null ? "—" : formatCurrency(Math.round(endingCoins));
+    if (coinsJpyEl) coinsJpyEl.textContent = endingCoinsJpy === null ? "—" : formatCurrency(Math.round(endingCoinsJpy));
     if (infIdrEl) infIdrEl.textContent = formatCurrency(Math.round(totalInflow));
     if (infJpyEl) infJpyEl.textContent = formatCurrency(Math.round(totalInflowJpy));
     if (outIdrEl) outIdrEl.textContent = formatCurrency(Math.round(totalOutflow));

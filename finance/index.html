@@ -28,6 +28,7 @@
     <link rel="stylesheet" href="features/receipt-evidence.css?v=5.9.0">
     <link rel="stylesheet" href="features/account-evidence.css?v=5.3.0">
     <link rel="stylesheet" href="features/jp-post-account.css?v=1.0.0">
+    <link rel="stylesheet" href="features/gopay-proof.css?v=1.0.0">
     <link rel="stylesheet" href="features/visa-review.css?v=5.4.0">
     <link rel="stylesheet" href="features/tokopedia-proof.css?v=6.0.0">
     <link rel="stylesheet" href="features/flow-audit.css?v=5.7.0">
@@ -46,9 +47,10 @@
     <script src="features/receipt-evidence.js?v=6.1.0" defer></script>
     <script src="features/account-evidence.js?v=6.0.0" defer></script>
     <script src="features/jp-post-account.js?v=1.0.0" defer></script>
+    <script src="features/gopay-proof.js?v=1.0.0" defer></script>
     <script src="features/visa-review.js?v=5.4.0" defer></script>
     <script src="features/tokopedia-proof.js?v=6.2.0" defer></script>
-    <script src="app.js?v=6.3.0" defer></script>
+    <script src="app.js?v=6.4.0" defer></script>
 </head>
 <body class="dark-theme">
     <div id="auth-gate" class="auth-gate" aria-live="polite">
@@ -1936,6 +1938,26 @@
             </div>
 
             <div id="view-gopay-account" class="dashboard-view hidden">
+                <section id="gopay-proof" class="gopay-proof hidden" aria-label="Verified GoPay evidence">
+                  <div class="gopay-proof-head glass-panel">
+                    <strong id="gopay-proof-banner">Checking authenticated GoPay statement…</strong>
+                    <small>Separate evidence: the current snapshot is not a bank API balance. Never combine Coins, a card payment, transfers and wallet income.</small>
+                  </div>
+                  <div class="gopay-proof-grid">
+                    <article class="gopay-proof-tile glass-panel"><span>GoPay balance · app screenshot</span><strong id="gopay-proof-balance">—</strong><small id="gopay-proof-date">Historical observation</small></article>
+                    <article class="gopay-proof-tile glass-panel"><span>GoPay Coins · app screenshot</span><strong id="gopay-proof-coins">—</strong><small>Not cash income</small></article>
+                    <article class="gopay-proof-tile glass-panel"><span>October usage displayed by app</span><strong id="gopay-proof-usage">—</strong><small>Not the full monthly statement</small></article>
+                  </div>
+                  <section class="gopay-proof-summary glass-panel">
+                    <h3>September 2026 · official 3-page e-statement</h3>
+                    <div class="gopay-proof-pairs">
+                      <div class="gopay-proof-pair"><span>Credits (including top-ups)</span><strong id="gopay-proof-sep-inflow">—</strong></div>
+                      <div class="gopay-proof-pair"><span>Statement expenditure</span><strong id="gopay-proof-sep-net">—</strong></div>
+                      <div class="gopay-proof-pair"><span>GoPay Coins earned / used</span><strong id="gopay-proof-sep-coins">—</strong></div>
+                    </div>
+                    <p id="gopay-proof-sep-explain"></p>
+                  </section>
+                </section>
                 <!-- Controls: Statement selector & filters -->
                 <section class="toped-card-controls-section" style="margin-bottom: 1.5rem;">
                     <div class="glass-panel toped-card-selector-card" style="padding: 1.25rem; display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap;">
@@ -1979,7 +2001,7 @@
                     <div class="kpi-card glass-panel card-gopay-balance" style="--color-cc: #10b981; --color-cc-glow: rgba(16, 185, 129, 0.15);">
                         <div class="kpi-card-inner">
                             <div class="kpi-info">
-                                <span class="kpi-label">Jago Wallet Balance</span>
+                                <span class="kpi-label">Period-end wallet balance (if verified)</span>
                                 <div class="kpi-value-container" style="display: flex; flex-direction: column; align-items: flex-start; gap: 0.1rem; margin-top: 0.2rem;">
                                     <div style="display: flex; align-items: baseline; gap: 0.2rem;">
                                         <span class="kpi-currency" style="font-size: 1rem;">Rp</span>
@@ -1999,7 +2021,7 @@
                     <div class="kpi-card glass-panel card-gopay-coins" style="--color-cc: #f59e0b; --color-cc-glow: rgba(245, 158, 11, 0.15);">
                         <div class="kpi-card-inner">
                             <div class="kpi-info">
-                                <span class="kpi-label">GoPay Coins Balance</span>
+                                <span class="kpi-label">Period-end Coins (if verified)</span>
                                 <div class="kpi-value-container" style="display: flex; flex-direction: column; align-items: flex-start; gap: 0.1rem; margin-top: 0.2rem;">
                                     <div style="display: flex; align-items: baseline; gap: 0.2rem;">
                                         <span class="kpi-currency" style="font-size: 1rem;">Pts</span>
@@ -2019,7 +2041,7 @@
                     <div class="kpi-card glass-panel card-gopay-inflow" style="--color-cc: #3b82f6; --color-cc-glow: rgba(59, 130, 246, 0.15);">
                         <div class="kpi-card-inner">
                             <div class="kpi-info">
-                                <span class="kpi-label">Total Cash Inflow</span>
+                                <span class="kpi-label">Gross credits (incl. top-ups)</span>
                                 <div class="kpi-value-container" style="display: flex; flex-direction: column; align-items: flex-start; gap: 0.1rem; margin-top: 0.2rem;">
                                     <div style="display: flex; align-items: baseline; gap: 0.2rem;">
                                         <span class="kpi-currency" style="font-size: 1rem;">Rp</span>
@@ -2039,7 +2061,7 @@
                     <div class="kpi-card glass-panel card-gopay-outflow" style="--color-cc: #ef4444; --color-cc-glow: rgba(239, 68, 68, 0.15);">
                         <div class="kpi-card-inner">
                             <div class="kpi-info">
-                                <span class="kpi-label">Total Cash Outflow</span>
+                                <span class="kpi-label">Gross debits (incl. card / transfers)</span>
                                 <div class="kpi-value-container" style="display: flex; flex-direction: column; align-items: flex-start; gap: 0.1rem; margin-top: 0.2rem;">
                                     <div style="display: flex; align-items: baseline; gap: 0.2rem;">
                                         <span class="kpi-currency" style="font-size: 1rem;">Rp</span>
