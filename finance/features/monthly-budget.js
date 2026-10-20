@@ -142,9 +142,13 @@
     const targets = selectedBudgets();
     const planned = targets.reduce((sum, b) => sum + amount(b.amount), 0);
     const spent = targets.reduce((sum, b) => sum + (actualMap.get(b.category) || 0), 0);
-    const totalActual = [...actualMap.values()].reduce((sum, value) => sum + value, 0);
+    // A refund-only category is a credit, not a negative slice of the budget
+    // coverage denominator. Coverage refers to positive net category spending.
+    const positiveActual = [...actualMap.values()].reduce((sum,v)=>sum+Math.max(0,v),0);
+    const positiveBudgeted = targets.reduce((sum,b)=>
+      sum+Math.max(0,actualMap.get(b.category)||0),0);
     const remaining = planned - spent;
-    const coverage = totalActual > 0 ? spent / totalActual * 100 : (planned > 0 ? 100 : 0);
+    const coverage = positiveActual > 0 ? positiveBudgeted / positiveActual * 100 : 0;
 
     setText("budget-planned-total", `¥${formatMoney(planned)}`);
     setText("budget-spent-total", `${spent<0?"−":""}¥${formatMoney(Math.abs(spent))}`);
