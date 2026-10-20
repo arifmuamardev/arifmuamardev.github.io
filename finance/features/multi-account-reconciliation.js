@@ -178,11 +178,14 @@
     set("multi-account-status",m.partial?
       "Partial source data · checks incomplete":
       "Source evidence through "+m.asOf+" · no live bank connection");
-    set("multi-account-interbank",m.groups.interbank.paired+" paired · "+
-      currency(m.groups.interbank.total,"IDR"));
-    set("multi-account-jp",m.groups.jpPost.linked+"/"+m.groups.jpPost.rows.length+" ledger linked");
-    set("multi-account-visa",m.groups.visa.linked+"/"+m.groups.visa.rows.length+" ledger linked");
-    set("multi-account-card",m.groups.tokopedia.linked+"/"+m.groups.tokopedia.rows.length+" verified");
+    set("multi-account-interbank",(!Array.isArray(source.bni)||!Array.isArray(source.muamalat)||source.bniError||source.muamalatError)?
+      "Source unavailable":m.groups.interbank.paired+" paired · "+currency(m.groups.interbank.total,"IDR"));
+    set("multi-account-jp",source.jpPostLoadError||!Array.isArray(source.jpPost)?
+      "Source unavailable":m.groups.jpPost.linked+"/"+m.groups.jpPost.rows.length+" ledger linked");
+    set("multi-account-visa",source.cardEvidenceError||!Array.isArray(source.cardEvidence)?
+      "Source unavailable":m.groups.visa.linked+"/"+m.groups.visa.rows.length+" ledger linked");
+    set("multi-account-card",source.tokopediaStatementsError||!Array.isArray(source.tokopediaStatements)?
+      "Source unavailable":m.groups.tokopedia.linked+"/"+m.groups.tokopedia.rows.length+" verified");
     set("multi-account-review-count",m.review.length+" source rows need review / remain unlinked");
     const list=el("multi-account-results");
     if(!list)return;
