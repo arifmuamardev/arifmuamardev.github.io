@@ -48,6 +48,7 @@
     <script src="features/account-evidence.js?v=6.0.0" defer></script>
     <script src="features/jp-post-account.js?v=1.0.0" defer></script>
     <script src="features/gopay-proof.js?v=1.0.0" defer></script>
+    <script src="features/gopay-reconciliation.js?v=1.0.0" defer></script>
     <script src="features/visa-review.js?v=5.4.0" defer></script>
     <script src="features/tokopedia-proof.js?v=6.2.0" defer></script>
     <script src="app.js?v=6.4.0" defer></script>
@@ -1956,6 +1957,19 @@
                       <div class="gopay-proof-pair"><span>GoPay Coins earned / used</span><strong id="gopay-proof-sep-coins">—</strong></div>
                     </div>
                     <p id="gopay-proof-sep-explain"></p>
+                  </section>
+                  <section id="gopay-cross-account" class="gopay-proof-summary gopay-cross-account glass-panel hidden" aria-label="September cross-account reconciliation">
+                    <header class="gopay-cross-head">
+                      <h3>Cross-account reconciliation · September 2026</h3>
+                      <span id="gopay-cross-status" class="gopay-cross-status" role="status">Checking source evidence</span>
+                    </header>
+                    <div class="gopay-cross-grid">
+                      <div class="gopay-cross-metric"><span>BNI to GoPay · internal transfers</span><strong id="gopay-cross-topups">—</strong></div>
+                      <div class="gopay-cross-metric"><span>Bank top-up fees · already expensed</span><strong id="gopay-cross-fees">—</strong></div>
+                      <div class="gopay-cross-metric"><span>Card-funded payments · existing ledger</span><strong id="gopay-cross-card">—</strong></div>
+                    </div>
+                    <div class="gopay-cross-list" id="gopay-cross-pairs" aria-label="Matched BNI and GoPay movements"></div>
+                    <p id="gopay-cross-exceptions">No source checks run yet.</p>
                   </section>
                 </section>
                 <!-- Controls: Statement selector & filters -->
