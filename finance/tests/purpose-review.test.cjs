@@ -9,28 +9,28 @@ const row=(id,date,item,category,jpy,other={})=>({
 function fixture(){
  return {
   cash:[
-   row(1,"2026-06-29","Bank Transfer / Payment","Others",28753),
-   row(2,"2025-02-05","PAYPAL *INSTITUTEEL","Others",14174.48,
-    {currency:"IDR",expense_idr:1553523}),
-   row(3,"2026-05-26","Droppy","Others",1153),
-   row(4,"2025-01-23","PAYPAL *SHENDUQRWEA","Others",805.87),
-   row(5,"2025-09-24","Hutang Jeriko","Others",0),
-   row(6,"2026-10-18","Transfer to Ika Maulita","Transfers & Movements",1824.82,
+   row(1,"2026-06-15","Bank Transfer or Payment","Others",400),
+   row(2,"2025-02-06","PAYPAL *SAMPLE MERCHANT","Others",200,
+    {currency:"IDR",expense_idr:22000}),
+   row(3,"2026-05-20","Unknown card merchant","Others",100,{note:"CC KU"}),
+   row(4,"2025-01-12","PAYPAL *UNIDENTIFIED","Others",50),
+   row(5,"2025-09-24","Historical placeholder","Others",0),
+   row(6,"2026-09-12","Transfer to Recipient A","Transfers & Movements",912.41,
+    {currency:"IDR",expense_idr:100000}),
+   row(7,"2026-09-20","Transfer ke Recipient B","Transfers & Movements",1824.82,
     {currency:"IDR",expense_idr:200000}),
-   row(7,"2026-09-28","Transfer ke Ika Maulita","Transfers & Movements",27372.26,
-    {currency:"IDR",expense_idr:3000000}),
-   row(8,"2026-10-15","GoPay e-wallet top-up from BNI","Transfers & Movements",1824.82,
+   row(8,"2026-09-15","GoPay e-wallet top-up from BNI","Transfers & Movements",912.41,
     {currency:"IDR",expense_idr:200000}),
    row(9,"2026-09-10","Hokuriku VISA Card Payment","Transfers & Movements",65842),
    row(10,"2026-10-19","Food","Food & Dining",100),
    row(11,"2026-12-01","Unknown future","Others",900)
   ],
   bni:[
-   {id:100,date:"2026-10-18",sign:"-",amount:200000,description:"BNI - IKA"},
-   {id:101,date:"2026-09-28",sign:"-",amount:3000000,description:"BNI - IKA"}
+   {id:100,date:"2026-09-12",sign:"-",amount:100000,description:"BNI - RECIPIENT A"},
+   {id:101,date:"2026-09-20",sign:"-",amount:200000,description:"BNI - RECIPIENT B"}
   ],
   muamalat:[
-   {id:102,date:"2026-09-28",sign:"-",amount:3000000,description:"Transfer own account"}
+   {id:102,date:"2026-09-20",sign:"-",amount:200000,description:"Transfer own account"}
   ]
  };
 }
@@ -38,11 +38,11 @@ const asOf={asOf:"2026-10-20"};
 test("one queue splits four unresolved monetary entries, one zero entry, and two recipient purposes",()=>{
  const m=inspect(fixture(),asOf);
  assert.equal(m.unknownPayments.length,4);
- assert.equal(m.unknownValueYen,44886.35);
+ assert.equal(m.unknownValueYen,750);
  assert.equal(m.zeroRecords.length,1);
  assert.equal(m.recipientRows.length,2);
  assert.equal(m.pendingPurpose,6);
- assert.equal(m.recipientOriginalIDR,3200000);
+ assert.equal(m.recipientOriginalIDR,300000);
  assert.equal(m.recipientSourceCandidate,1);
  assert.equal(m.recipientSourceAmbiguous,1);
 });
@@ -62,7 +62,7 @@ test("multiple same-valued bank debits remain ambiguous",()=>{
 });
 test("Jpy merchant classification cannot be decided by BNI numeric coincidence",()=>{
  const f=fixture();
- f.bni.push({id:201,date:"2026-06-29",sign:"-",amount:28753,description:"Other debit"});
+ f.bni.push({id:201,date:"2026-06-15",sign:"-",amount:400,description:"Other debit"});
  const m=inspect(f,asOf);
  assert.equal(m.unknownPayments.find(r=>r.id===1).source.status,"purpose unresolved");
 });
