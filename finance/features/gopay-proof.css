@@ -15,3 +15,17 @@
 .gopay-proof-summary p{font-size:.73rem;line-height:1.65;color:var(--text-muted);margin:.85rem 0 0}
 @media(max-width:720px){.gopay-proof-grid,.gopay-proof-pairs{grid-template-columns:1fr 1fr}}
 @media(max-width:470px){.gopay-proof-grid,.gopay-proof-pairs{grid-template-columns:1fr 1fr}.gopay-proof-tile strong{font-size:1.14rem}}
+
+.gopay-cross-head{display:flex;justify-content:space-between;align-items:flex-start;gap:.75rem;flex-wrap:wrap}
+.gopay-cross-head h3{margin:0}
+.gopay-cross-status{font-size:.8rem;color:var(--text-secondary)}
+.gopay-cross-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.6rem;margin-top:1rem}
+.gopay-cross-metric{padding:.85rem;border:1px solid var(--border-color,rgba(150,150,150,.2));border-radius:10px;display:flex;flex-direction:column;gap:.4rem;min-width:0}
+.gopay-cross-metric span{font-size:.78rem;color:var(--text-secondary)}
+.gopay-cross-metric strong{font-size:1rem;color:var(--text-primary);overflow-wrap:anywhere}
+.gopay-cross-list{margin-top:1rem;border-top:1px solid var(--border-color,rgba(150,150,150,.2))}
+.gopay-cross-pair{display:flex;justify-content:space-between;align-items:center;gap:.65rem;padding:.55rem 0;border-bottom:1px solid var(--border-color,rgba(150,150,150,.12))}
+.gopay-cross-pair span{color:var(--text-secondary);font-size:.8rem}
+.gopay-cross-pair strong{font-size:.82rem;font-weight:600;color:var(--text-primary);text-align:right}
+.gopay-cross-account p{font-size:.8rem;line-height:1.6}
+@media(max-width:720px){.gopay-cross-grid{grid-template-columns:1fr}.gopay-cross-pair{align-items:flex-start}}
