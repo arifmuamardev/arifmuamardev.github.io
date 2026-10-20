@@ -80,10 +80,13 @@
 
   function summarizeMonth(month) {
     const rows = monthRows(month);
-    const income = rows.reduce((sum, item) => sum + Math.max(0, amount(item.pemasukan)), 0);
-    const expenses = rows.reduce((sum, item) => sum + Math.max(0, amount(item.pengeluaran)), 0);
-    const refunds = rows.reduce((sum, item) => sum + Math.abs(Math.min(0, amount(item.pengeluaran))), 0);
-    const netExpenses = Math.max(0, expenses - refunds);
+    const model = window.FinanceFlowClassifier.report(rows);
+    const income = model.income;
+    const expenses = model.grossSpending;
+    const refunds = model.refunds;
+    // Net spending can be negative when refunds exceed purchases;
+    // do not silently floor it while KPIs and monthly charts show the credit.
+    const netExpenses = model.spending;
     const net = income - netExpenses;
     const savingsRate = income > 0 ? net / income * 100 : null;
 
@@ -156,7 +159,7 @@
 
     setText("review-month-title", monthLabel(selectedMonth));
     setText("review-income", `¥${formatMoney(current.income)}`);
-    setText("review-spending", `¥${formatMoney(current.netExpenses)}`);
+    setText("review-spending", `${current.netExpenses<0?"−":""}¥${formatMoney(Math.abs(current.netExpenses))}`);
     setText("review-net", `${current.net < 0 ? "−" : ""}¥${formatMoney(Math.abs(current.net))}`);
     setText("review-savings-rate", current.savingsRate === null ? "—" : `${current.savingsRate.toFixed(1)}%`);
     setTone("review-net", current.net);
@@ -200,18 +203,18 @@
       totals.set(category, (totals.get(category) || 0) + rawExpense);
     });
 
+    // Positive net categories form the proportional chart denominator;
+    // standalone refund categories are negative amounts, not pie segments.
+    const positives=[...totals.values()].reduce((s,v)=>s+Math.max(0,v),0);
     const rows = [...totals.entries()]
-      .map(([category, rawValue]) => {
-        const value = Math.max(0, rawValue);
-        return {
+      .filter(([,value])=>value>0)
+      .map(([category,value])=>({
         category,
         value,
-        share: summary.netExpenses > 0 ? value / summary.netExpenses : 0
-        };
-      })
-      .filter(row => row.value > 0)
-      .sort((a, b) => b.value - a.value)
-      .slice(0, 8);
+        share: positives>0?value/positives:0
+      }))
+      .sort((a,b)=>b.value-a.value)
+      .slice(0,8);
 
     if (!rows.length) {
       const empty = document.createElement("div");
@@ -321,13 +324,13 @@
 
     const rows = targets.map(target => {
       const planned = amount(target.amount);
-      const actual = Math.max(0, actualMap.get(target.category) || 0);
+      const actual = actualMap.get(target.category) || 0;
       return {
         category: target.category,
         planned,
         actual,
         variance: planned - actual,
-        ratio: planned > 0 ? actual / planned : 0
+        ratio: planned > 0 ? Math.max(0,actual) / planned : 0
       };
     }).sort((a, b) => b.ratio - a.ratio);
 
@@ -336,7 +339,7 @@
     const varianceTotal = plannedTotal - actualTotal;
 
     setText("review-budget-planned", `¥${formatMoney(plannedTotal)}`);
-    setText("review-budget-actual", `¥${formatMoney(actualTotal)}`);
+    setText("review-budget-actual", `${actualTotal<0?"−":""}¥${formatMoney(Math.abs(actualTotal))}`);
     setText("review-budget-variance", `${varianceTotal < 0 ? "−" : "+"}¥${formatMoney(Math.abs(varianceTotal))}`);
     setTone("review-budget-variance", varianceTotal);
 
@@ -406,8 +409,8 @@
     const largest = summary.rows
       .map(item => Math.max(0, amount(item.pengeluaran)))
       .sort((a, b) => b - a)[0] || 0;
-    if (largest > 0 && summary.netExpenses > 0) {
-      const share = largest / summary.netExpenses * 100;
+    if (largest > 0 && summary.expenses > 0) {
+      const share = largest / summary.expenses * 100;
       if (share >= 20) {
         signals.push({
           tone: "neutral",
