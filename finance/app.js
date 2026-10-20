@@ -1422,6 +1422,7 @@ function setupTransactionWorkspace() {
     window.FinanceVisaReview?.init();
     window.FinanceTokopediaProof?.init();
     window.FinanceFlowAudit?.init();
+    window.FinancePurposeReview?.init();
     window.FinanceTransferProof?.init();
     window.FinanceMultiAccountReconciliation?.init();
 
@@ -1706,6 +1707,9 @@ async function fetchAndInitData() {
             loadError: payload.receiptEvidenceError
         });
         window.FinanceFlowAudit?.setData({ cash: cashData });
+        window.FinancePurposeReview?.setData({
+          cash: cashData, bni: bniData, muamalat: muamalatData
+        });
         window.FinanceTransferProof?.setData({
           cash: cashData, bni: bniData, muamalat: muamalatData,
           gopay: gopayData, tokopediaEvidence: payload.tokopediaEvidence
