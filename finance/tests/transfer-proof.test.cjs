@@ -69,3 +69,27 @@ test("source comparison does not alter underlying ledger values",()=>{
  matchDebitForTest(x,[B("bni",1,"-",250000)]);
  assert.equal(JSON.stringify(x),before);
 });
+
+test("verified repayment fee explains historic Tokopedia delta only with full matching evidence",()=>{
+ const evidence=[{evidence_key:"tokopedia_transactions_20261014",payload:{lines:[
+  {source_id:"TKP-SHOT-20260922-P01",date:"2026-09-22",amount_idr:3350609}]}}];
+ const source=[B("bni",725,"-",3355609,"2026-09-22","TOKOPEDIA - PLSTOKOPEDIA")];
+ const cash=[
+  {id:2035,tanggal:"2026-09-22",currency:"IDR",expense_idr:-3350609,
+   pengeluaran:0,kategori_normalized:"Card Settlement",note:"TKP-SHOT-20260922-P01"},
+  {id:2064,tanggal:"2026-09-22",currency:"IDR",expense_idr:5000,
+   pengeluaran:45.62,note:"TKP-PAYMENT-FEE-20260922-5000"}
+ ];
+ const statements=[{payload:{previous_payment_idr:3350609,
+  previous_payment_fee_idr:5000,previous_payment_bank_debit_idr:3355609,
+  previous_payment_bni_id:725,previous_payment_fee_ledger_id:2064,
+  previous_payment_ledger_id:2035}}];
+ const m=cardGapForTest(evidence,source,cash,statements);
+ assert.equal(m.state,"explained_fee");
+ assert.equal(m.gap,5000);
+ assert.equal(m.feeLedgerId,2064);
+ const broken=cardGapForTest(evidence,source,cash.slice(0,1),statements);
+ assert.equal(broken.state,"difference");
+ const wrongBank=cardGapForTest(evidence,[B("bni",726,"-",3355609,"2026-09-22","TOKOPEDIA")],cash,statements);
+ assert.equal(wrongBank.state,"difference");
+});
