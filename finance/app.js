@@ -1418,7 +1418,7 @@ function setupTransactionWorkspace() {
     window.FinanceReceiptEvidence?.init();
     window.FinanceAccountEvidence?.init();
     window.FinanceJPPost?.init();
-    window.FinanceGoPayProof?.init();
+    window.FinanceGoPayProof?.init(); window.FinanceGoPayCrossAccount?.init();
     window.FinanceVisaReview?.init();
     window.FinanceTokopediaProof?.init();
     window.FinanceFlowAudit?.init();
@@ -1724,6 +1724,13 @@ async function fetchAndInitData() {
         });
         window.FinanceGoPayProof?.setData({
             gopay: gopayData,
+            receipts: payload.receiptEvidence,
+            loadError: payload.receiptEvidenceError
+        });
+        window.FinanceGoPayCrossAccount?.setData({
+            gopay: gopayData,
+            bni: bniData,
+            cash: cashData,
             receipts: payload.receiptEvidence,
             loadError: payload.receiptEvidenceError
         });
