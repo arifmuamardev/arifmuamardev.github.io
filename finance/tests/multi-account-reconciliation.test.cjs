@@ -91,12 +91,13 @@ test("future bank payments and future statements cannot be treated as posted",()
  assert.equal(m.groups.tokopedia.rows.length,1);
 });
 test("data never mutated and source errors reported as partial",()=>{
- const f=fixture();const before=JSON.stringify(f);f.cardEvidenceError=true;
+ const f=fixture();f.cardEvidenceError=true;
+ const before=JSON.stringify(f);
  const m=inspect(f,opts);
  assert.equal(m.partial,true);
  assert.equal(m.sourceErrors[0],"cardEvidenceError");
  assert.equal(m.ready,true);
- assert.equal(JSON.stringify(f),before.replace('}',',"cardEvidenceError":true}'));
+ assert.equal(JSON.stringify(f),before);
 });
 test("unknown data leaves no invented amounts",()=>{
  const m=inspect({},opts);
