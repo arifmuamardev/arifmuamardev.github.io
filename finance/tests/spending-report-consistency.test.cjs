@@ -14,7 +14,7 @@ const row=(id,category,out=0,income=0,extra={})=>({
 });
 const fixture=()=>[
  row(1,"Food & Dining",500),
- row(2,"Food & Dining",-100,{income:0}),
+ row(2,"Food & Dining",-100),
  row(3,"Scholarship Income",0,1000),
  row(4,"Transfers & Movements",20000,0,{item_normalized:"Self-Transfer (Internal)"}),
  row(5,"Card Settlement",30000,0,{item:"Hokuriku VISA Card Payment"}),
