@@ -5673,6 +5673,10 @@ function updateGoPayAccountView() {
         const cashDisplay = tx.amount > 0 ? `${tx.sign}Rp ${formatCurrency(Math.round(tx.amount))}` : "-";
         const coinsDisplay = tx.coins > 0 ? `${tx.sign}${formatCurrency(Math.round(tx.coins))} Pts` : "-";
         const jpyDisplay = tx.amount > 0 ? `~ ¥${formatCurrency(Math.round(tx.amount_jpy))}` : (tx.coins > 0 ? `~ ¥${formatCurrency(Math.round(tx.coins_jpy))}` : "-");
+        // An absent balance in an imported statement is unknown, never Rp0.
+        const balanceDisplay = tx.balance === null || tx.balance === undefined || tx.balance === "" ||
+            !Number.isFinite(Number(tx.balance)) ? "—" :
+            `Rp ${formatCurrency(Math.round(Number(tx.balance)))}`;
         
         tr.innerHTML = `
             <td style="color: var(--text-muted); font-size: 0.85rem; font-family: monospace;">${formattedDate} ${tx.time || ''}</td>
@@ -5691,7 +5695,7 @@ function updateGoPayAccountView() {
                 ${jpyDisplay}
             </td>
             <td class="amount-col" style="font-family: monospace; font-weight: 500;">
-                Rp ${formatCurrency(Math.round(tx.balance))}
+                ${balanceDisplay}
             </td>
         `;
         tbody.appendChild(tr);
@@ -5751,7 +5755,7 @@ function updateGoPayCharts(monthTxs, filteredTxs) {
                         borderRadius: 4
                     },
                     {
-                        label: 'Outflows (Spendings)',
+                        label: 'Gross debits (incl. transfers/cards)',
                         data: outflowValues,
                         backgroundColor: 'rgba(239, 68, 68, 0.75)',
                         borderColor: '#ef4444',
