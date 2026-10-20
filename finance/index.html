@@ -33,6 +33,7 @@
     <link rel="stylesheet" href="features/tokopedia-proof.css?v=6.0.0">
     <link rel="stylesheet" href="features/flow-audit.css?v=5.7.0">
     <link rel="stylesheet" href="features/transfer-proof.css?v=5.8.0">
+    <link rel="stylesheet" href="features/multi-account-reconciliation.css?v=1.0.0">
     <script src="features/category-standards.js?v=5.6.0" defer></script>
     <script src="features/transaction-editor.js?v=5.6.0" defer></script>
     <script src="features/transaction-history.js?v=4.5.0" defer></script>
@@ -42,6 +43,7 @@
     <script src="features/flow-classifier.js?v=5.7.0" defer></script>
     <script src="features/flow-audit.js?v=5.7.0" defer></script>
     <script src="features/transfer-proof.js?v=5.8.0" defer></script>
+    <script src="features/multi-account-reconciliation.js?v=1.0.0" defer></script>
     <script src="features/forecast.js?v=5.7.0" defer></script>
     <script src="features/data-integrity.js?v=5.2.0" defer></script>
     <script src="features/receipt-evidence.js?v=6.1.0" defer></script>
@@ -51,7 +53,7 @@
     <script src="features/gopay-reconciliation.js?v=1.0.0" defer></script>
     <script src="features/visa-review.js?v=5.4.0" defer></script>
     <script src="features/tokopedia-proof.js?v=6.2.0" defer></script>
-    <script src="app.js?v=6.5.0" defer></script>
+    <script src="app.js?v=6.6.0" defer></script>
 </head>
 <body class="dark-theme">
     <div id="auth-gate" class="auth-gate" aria-live="polite">
@@ -667,6 +669,36 @@
                     <article class="transfer-proof-kpi glass-panel"><span>Unique bank debit/credit pairs</span><strong id="transfer-proof-paired">—</strong><small>Bank evidence only</small></article>
                     <article class="transfer-proof-kpi glass-panel"><span>Legal account ownership</span><strong id="transfer-proof-ownership">—</strong><small>Requires your confirmation</small></article>
                   </div>
+                  <section id="multi-account-reconciliation" class="transfer-proof-panel glass-panel multi-account-shell hidden" aria-label="Unified bank and card reconciliation">
+                    <div class="multi-account-title">
+                      <div>
+                        <span class="home-section-kicker">Matched bank evidence · audit only</span>
+                        <h3>Cross-account reconciliation</h3>
+                      </div>
+                      <small id="multi-account-status">Checking sources…</small>
+                    </div>
+                    <p class="transfer-proof-muted">Bank debits, wallet credits, card settlements and bank statements are not added as new purchases. This review shows transactions linked to their original evidence and cases still requiring attention. It does not establish legal ownership of every recipient.</p>
+                    <div class="multi-account-metrics">
+                      <article><span>Muamalat → BNI internal movements</span><strong id="multi-account-interbank">—</strong></article>
+                      <article><span>Japan Post Bank → ledger</span><strong id="multi-account-jp">—</strong></article>
+                      <article><span>Hokuriku VISA payments → ledger</span><strong id="multi-account-visa">—</strong></article>
+                      <article><span>BRI Tokopedia Card settlement</span><strong id="multi-account-card">—</strong></article>
+                    </div>
+                    <div class="multi-account-controls">
+                      <div>
+                        <h4>Transaction-level evidence</h4>
+                        <p class="transfer-proof-muted" id="multi-account-review-count">Loading review items…</p>
+                      </div>
+                      <div class="transfer-proof-controls" aria-label="Reconciliation status filter">
+                        <button type="button" class="active" data-multi-filter="all">All</button>
+                        <button type="button" data-multi-filter="linked">Paired / linked</button>
+                        <button type="button" data-multi-filter="review">Needs review</button>
+                      </div>
+                    </div>
+                    <p id="multi-account-shown" class="transfer-proof-muted"></p>
+                    <div id="multi-account-results" aria-live="polite"></div>
+                    <p class="transfer-proof-muted">Coverage starts August 2026 and ends at the current Japan-local date. Accounts with incomplete statements may have missing counterpart evidence. A source-only entry is not proof of an unrecorded expense, and a settlement is not spending twice.</p>
+                  </section>
                   <div id="transfer-proof-payment" class="transfer-proof-warning glass-panel">Checking Tokopedia Card vs BNI…</div>
                   <div class="transfer-proof-columns">
                     <section class="transfer-proof-panel glass-panel">
