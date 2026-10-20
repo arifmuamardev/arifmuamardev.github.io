@@ -43,7 +43,7 @@ function bankPairs(source){
   pairs.sort((a,b)=>b.from.date.localeCompare(a.from.date)||a.from.id-b.from.id);
   return {pairs,ambiguous};
 }
-function cardGap(evidence,source){
+function cardGap(evidence,source,cash=[],statements=[]){
   const imported=(Array.isArray(evidence)?evidence:[])
     .find(x=>x.evidence_key==="tokopedia_transactions_20261014");
   const payment=imported?.payload?.lines?.find(x=>x.source_id==="TKP-SHOT-20260922-P01");
@@ -52,8 +52,33 @@ function cardGap(evidence,source){
   const possible=source.filter(x=>x.account==="bni"&&x.sign==="-"&&x.date===paymentDate&&
     /TOKOPEDIA/i.test(x.description)&&Math.abs(x.amount-original)<=10000);
   if(possible.length!==1)return {state:possible.length?"ambiguous":"missing",original,paymentDate};
-  return {state:Math.abs(possible[0].amount-original)<=1?"exact":"difference",
-    original,paymentDate,bankDebit:possible[0].amount,gap:possible[0].amount-original};
+  const bank=possible[0],gap=bank.amount-original;
+  if(Math.abs(gap)<=1)return {state:"exact",original,paymentDate,bankDebit:bank.amount,gap};
+  // Confirm the historical fee ONLY if the official later statement explicitly
+  // references this previous repayment and both corresponding ledger entries.
+  const proof=(Array.isArray(statements)?statements:[]).filter(x=>{
+    const p=x.payload||{};
+    return Number(p.previous_payment_idr)===original &&
+      Number(p.previous_payment_fee_idr)===gap && gap>0 &&
+      Number(p.previous_payment_bank_debit_idr)===bank.amount &&
+      String(p.previous_payment_bni_id)===String(bank.id);
+  });
+  const ledger=Array.isArray(cash)?cash:[];
+  const feeRows=ledger.filter(x=>day(x.tanggal)===paymentDate &&
+    str(x.currency)==="IDR" && val(x.expense_idr)===gap &&
+    val(x.pengeluaran)>0 &&
+    /TKP-PAYMENT-FEE-20260922-5000/i.test(str(x.note)));
+  const settlements=ledger.filter(x=>day(x.tanggal)===paymentDate &&
+    str(x.currency)==="IDR" &&
+    val(x.expense_idr)===-original && val(x.pengeluaran)===0 &&
+    /Card Settlement/i.test(str(x.kategori_normalized||x.kategori)) &&
+    /TKP-SHOT-20260922-P01/.test(str(x.note)));
+  if(proof.length===1 && feeRows.length===1 && settlements.length===1 &&
+    String(proof[0].payload.previous_payment_fee_ledger_id)===String(feeRows[0].id) &&
+    String(proof[0].payload.previous_payment_ledger_id)===String(settlements[0].id))
+    return {state:"explained_fee",original,paymentDate,bankDebit:bank.amount,gap,
+      feeLedgerId:Number(feeRows[0].id)};
+  return {state:"difference",original,paymentDate,bankDebit:bank.amount,gap};
 }
 function inspect(data={}){
   const classifier=typeof window!=="undefined"?window.FinanceFlowClassifier:
@@ -70,7 +95,7 @@ function inspect(data={}){
     })).sort((a,b)=>b.date.localeCompare(a.date)||b.id-a.id);
   const count=state=>movements.filter(x=>x.match.state===state).length;
   const pairs=bankPairs(native);
-  return {ready:true,movements,pairs,card:cardGap(data.tokopediaEvidence,native),
+  return {ready:true,movements,pairs,card:cardGap(data.tokopediaEvidence,native,data.cash,data.tokopediaStatements),
     counts:{review:movements.length,source:count("source_candidate"),
       ambiguous:count("ambiguous"),notFound:count("missing")+count("no_native_source"),
       pairs:pairs.pairs.length,pairAmbiguous:pairs.ambiguous.length},
@@ -129,9 +154,12 @@ function render(){
  put("transfer-proof-ambiguous",m.counts.ambiguous);put("transfer-proof-missing",m.counts.notFound);
  put("transfer-proof-paired",m.counts.pairs);put("transfer-proof-ownership","Unverified");
  const p=m.card;
- const msg=p.state==="difference"
+ const msg=p.state==="explained_fee"
+  ?"Tokopedia Card payment reconciled: "+idr(p.original)+" card settlement + "+idr(p.gap)+
+    " verified processing fee = "+idr(p.bankDebit)+" BNI debit. Fee exists separately in the ledger (#"+p.feeLedgerId+"). Repayment is not another purchase."
+  :p.state==="difference"
   ?"Tokopedia Card payment: "+idr(p.original)+" shown on card, but BNI debit is "+idr(p.bankDebit)+
-    " ("+idr(p.gap)+" difference). Cause unknown; do not invent an administration fee."
+    " ("+idr(p.gap)+" difference). No complete source-linked fee explanation; review before changing records."
   :p.state==="exact"?"Tokopedia payment matches BNI debit amount.":
     "Tokopedia Card payment cannot be reconciled uniquely with the supplied source data.";
  put("transfer-proof-payment",msg);
@@ -142,7 +170,8 @@ function setData(next={}){
  bni:Array.isArray(next.bni)?next.bni:[],
  muamalat:Array.isArray(next.muamalat)?next.muamalat:[],
  gopay:Array.isArray(next.gopay)?next.gopay:[],
- tokopediaEvidence:Array.isArray(next.tokopediaEvidence)?next.tokopediaEvidence:[]};render();
+ tokopediaEvidence:Array.isArray(next.tokopediaEvidence)?next.tokopediaEvidence:[],
+ tokopediaStatements:Array.isArray(next.tokopediaStatements)?next.tokopediaStatements:[]};render();
 }
 function init(){
  const root=document.getElementById("view-transfer-proof");

@@ -1,0 +1,21 @@
+.purpose-review{display:flex;flex-direction:column;gap:.65rem}
+.purpose-review-heading{display:flex;justify-content:space-between;align-items:flex-start;gap:1rem;flex-wrap:wrap}
+.purpose-review-heading h3{margin:.35rem 0 .5rem}
+.purpose-review-heading p{max-width:65ch;margin:.2rem 0}
+.purpose-review-status{font-size:.77rem;color:var(--text-secondary);max-width:25ch}
+.purpose-review-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.7rem}
+.purpose-review-stats article{border:1px solid var(--border-card);border-radius:10px;padding:.9rem;min-width:0}
+.purpose-review-stats span{display:block;font-size:.78rem;color:var(--text-secondary);line-height:1.5}
+.purpose-review-stats strong{display:block;font-size:1.05rem;color:var(--text-primary);margin-top:.4rem;overflow-wrap:anywhere}
+.purpose-review-entry{padding:1rem .35rem;display:flex;justify-content:space-between;align-items:flex-start;gap:1rem;border-top:1px solid var(--border-card)}
+.purpose-review-copy{min-width:0;flex:1}
+.purpose-review-copy strong{display:block;color:var(--text-primary);font-size:.88rem}
+.purpose-review-copy small{display:block;font-size:.74rem;color:var(--text-secondary);line-height:1.6;margin-top:.3rem}
+.purpose-review-copy p{font-size:.78rem;line-height:1.55;color:var(--text-secondary);margin:.35rem 0}
+.purpose-review-side{text-align:right;min-width:140px}
+.purpose-review-side strong{display:block;color:var(--text-primary);font-size:.91rem}
+.purpose-review-side small{display:block;font-size:.75rem;color:var(--text-secondary);margin-top:.2rem}
+.purpose-review-open{color:var(--color-primary);background:transparent;border:1px solid var(--border-card);border-radius:7px;padding:.42rem .6rem;font-size:.74rem;margin-top:.55rem;cursor:pointer}
+.purpose-review-open:hover{background:rgba(148,163,184,.1)}
+@media(max-width:800px){.purpose-review-stats{grid-template-columns:1fr 1fr}}
+@media(max-width:540px){.purpose-review-stats{grid-template-columns:1fr}.purpose-review-entry{flex-direction:column}.purpose-review-side{text-align:left;min-width:0}}

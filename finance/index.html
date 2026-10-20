@@ -32,6 +32,7 @@
     <link rel="stylesheet" href="features/visa-review.css?v=5.4.0">
     <link rel="stylesheet" href="features/tokopedia-proof.css?v=6.0.0">
     <link rel="stylesheet" href="features/flow-audit.css?v=5.7.0">
+    <link rel="stylesheet" href="features/purpose-review.css?v=1.0.0">
     <link rel="stylesheet" href="features/transfer-proof.css?v=5.8.0">
     <link rel="stylesheet" href="features/multi-account-reconciliation.css?v=1.0.0">
     <script src="features/category-standards.js?v=5.6.0" defer></script>
@@ -42,6 +43,7 @@
     <script src="features/monthly-review.js?v=5.8.0" defer></script>
     <script src="features/flow-classifier.js?v=5.8.0" defer></script>
     <script src="features/flow-audit.js?v=5.7.0" defer></script>
+    <script src="features/purpose-review.js?v=1.0.0" defer></script>
     <script src="features/transfer-proof.js?v=5.8.0" defer></script>
     <script src="features/multi-account-reconciliation.js?v=1.0.0" defer></script>
     <script src="features/forecast.js?v=5.7.0" defer></script>
@@ -53,7 +55,7 @@
     <script src="features/gopay-reconciliation.js?v=1.0.0" defer></script>
     <script src="features/visa-review.js?v=5.4.0" defer></script>
     <script src="features/tokopedia-proof.js?v=6.2.0" defer></script>
-    <script src="app.js?v=6.7.0" defer></script>
+    <script src="app.js?v=6.8.0" defer></script>
 </head>
 <body class="dark-theme">
     <div id="auth-gate" class="auth-gate" aria-live="polite">
@@ -750,6 +752,30 @@
                   <article class="flow-audit-card glass-panel"><span>Incoming movements</span><strong id="flow-audit-incoming-moves">—</strong><small>Not new earnings</small></article>
                 </div>
                 <div id="flow-audit-check" class="flow-audit-check glass-panel">Checking ledger allocations…</div>
+                <section id="purpose-review" class="flow-audit-panel glass-panel purpose-review hidden" aria-label="Unclassified transactions and named recipient purpose review">
+                  <div class="purpose-review-heading">
+                    <div>
+                      <span class="home-section-kicker">Evidence-based triage · no automatic reclassification</span>
+                      <h3>Purpose review queue</h3>
+                      <p class="flow-audit-muted">Unclassified merchants and transfers to named recipients stay separate from confirmed household consumption until their purposes are verified. You can inspect each original ledger entry; reviewing this list makes no changes.</p>
+                    </div>
+                    <span class="purpose-review-status" id="purpose-review-count">Analyzing ledger entries…</span>
+                  </div>
+                  <div class="purpose-review-stats">
+                    <article><span>Unclassified monetary records</span><strong id="purpose-review-unknown">—</strong></article>
+                    <article><span>Named recipient transfers</span><strong id="purpose-review-recipient">—</strong></article>
+                    <article><span>Single bank debit candidates</span><strong id="purpose-review-bank">—</strong></article>
+                  </div>
+                  <div class="flow-audit-buttons" role="group" aria-label="Review queue filters">
+                    <button type="button" class="active" data-purpose-filter="all">All</button>
+                    <button type="button" data-purpose-filter="unknown">Unknown purpose</button>
+                    <button type="button" data-purpose-filter="recipient">Recipient transfers</button>
+                    <button type="button" data-purpose-filter="zero">Zero-value history</button>
+                  </div>
+                  <p class="flow-audit-muted" id="purpose-review-shown"></p>
+                  <div id="purpose-review-list"></div>
+                  <p class="flow-audit-muted">Original IDR and saved JPY equivalents are shown without applying new currency rates. A matching bank debit verifies a candidate transaction, not what the recipient did with the funds. Use the transaction detail to examine notes and evidence before editing its classification.</p>
+                </section>
                 <section class="flow-audit-panel glass-panel">
                   <h3>Transfers and unknown transactions requiring review (<span id="flow-audit-reviewed">—</span>)</h3>
                   <p class="flow-audit-muted">Items in this list may involve recipient payments or unrecognized merchants. They are separated provisionally, not proven to be internal transfers. Click to inspect transaction evidence.</p>
