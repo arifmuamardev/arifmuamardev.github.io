@@ -1423,6 +1423,7 @@ function setupTransactionWorkspace() {
     window.FinanceTokopediaProof?.init();
     window.FinanceFlowAudit?.init();
     window.FinanceTransferProof?.init();
+    window.FinanceMultiAccountReconciliation?.init();
 
     window.addEventListener("budget:data-tools-error", event => {
         showToast(event.detail?.message || "Data export failed.", "error");
@@ -1708,6 +1709,17 @@ async function fetchAndInitData() {
         window.FinanceTransferProof?.setData({
           cash: cashData, bni: bniData, muamalat: muamalatData,
           gopay: gopayData, tokopediaEvidence: payload.tokopediaEvidence
+        });
+        window.FinanceMultiAccountReconciliation?.setData({
+          cash: cashData,
+          bni: bniData,
+          muamalat: muamalatData,
+          jpPost: payload.jpPost,
+          cardEvidence: payload.cardEvidence,
+          tokopediaStatements: payload.tokopediaStatements,
+          jpPostLoadError: payload.jpPostLoadError,
+          cardEvidenceError: payload.cardEvidenceError,
+          tokopediaStatementsError: payload.tokopediaStatementsError
         });
         window.FinanceAccountEvidence?.setData({
             cash: cashData,
