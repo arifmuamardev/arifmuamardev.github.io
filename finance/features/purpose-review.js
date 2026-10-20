@@ -37,7 +37,7 @@
     if(kind==="recipient")return "Confirm purpose: family support, purchase/service, loan, reimbursement or own-account transfer. A matched bank debit does not decide this.";
     if(/bank transfer|payment/i.test(name))return "Check the bank beneficiary and receipt; this may be a transfer or a payment, not necessarily consumption.";
     if(/PAYPAL/i.test(name))return "Identify the merchant in PayPal activity or its invoice before assigning a spending category.";
-    if(/Droppy/i.test(name))return "Check the original card receipt to determine the product/service.";
+    if(/CC KU|credit card|tokopedia card/i.test(str(row.note)))return "Check the original card receipt to determine the product or service.";
     if(kind==="zero")return "Zero monetary impact: confirm whether this placeholder should remain archived.";
     return "Check the original receipt or card statement to identify the transaction purpose.";
   }
