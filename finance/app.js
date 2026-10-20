@@ -1712,7 +1712,8 @@ async function fetchAndInitData() {
         });
         window.FinanceTransferProof?.setData({
           cash: cashData, bni: bniData, muamalat: muamalatData,
-          gopay: gopayData, tokopediaEvidence: payload.tokopediaEvidence
+          gopay: gopayData, tokopediaEvidence: payload.tokopediaEvidence,
+          tokopediaStatements: payload.tokopediaStatements
         });
         window.FinanceMultiAccountReconciliation?.setData({
           cash: cashData,
